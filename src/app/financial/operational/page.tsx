@@ -3,7 +3,6 @@
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { 
   calcEBITDA, 
@@ -33,11 +32,9 @@ import {
   Wallet, 
   AlertCircle,
   PieChart as PieIcon,
-  LayoutList,
   CheckCircle2,
   Loader2,
   Target,
-  ArrowUpRight,
   ShieldAlert
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +61,6 @@ export default function OperationalPage() {
   const netRev = currentMonth?.netRevenue || 0;
   const opEx = currentMonth?.operatingExpenses || 0;
   const ebitda = calcEBITDA(netRev, opEx);
-  const margin = calcEBITDAMargin(ebitda, netRev);
   const runway = calculateRunway(42000000, opEx); // Mock cash
 
   // Distribution Logic
@@ -188,7 +184,7 @@ export default function OperationalPage() {
       </div>
 
       {/* Budget vs Actual Intelligence Section */}
-      <div className="space-y-6 pt-4">
+      <div id="budget" className="space-y-6 pt-4 scroll-mt-20">
         <div className="flex items-center gap-2 px-1">
           <ShieldAlert className="h-5 w-5 text-accent" />
           <h3 className="text-lg font-bold font-headline">Budget vs. Actual Variance</h3>
@@ -202,23 +198,32 @@ export default function OperationalPage() {
                   <thead className="text-[10px] uppercase bg-slate-50 text-slate-500 font-bold tracking-widest border-b">
                     <tr>
                       <th className="px-6 py-4">Expense Category</th>
-                      <th className="px-6 py-4 text-right">Budget (₹)</th>
-                      <th className="px-6 py-4 text-right">Actual (₹)</th>
+                      <th className="px-6 py-4 text-right">Target vs. Actual (Horizontal Indicator)</th>
                       <th className="px-6 py-4 text-right">Variance (₹)</th>
-                      <th className="px-6 py-4 text-center">Status</th>
+                      <th className="px-6 py-4 text-center">Situation Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {varianceReport.map((row, i) => (
                       <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
                         <td className="px-6 py-4">
-                          <div className="space-y-1">
-                            <p className="font-bold text-slate-900">{row.name}</p>
-                            <Progress value={Math.min((row.actualAmount / (row.budgetAmount || 1)) * 100, 100)} className={cn("h-1 w-24", row.status === 'OVER' ? 'bg-rose-100' : 'bg-slate-100')} />
+                          <p className="font-bold text-slate-900">{row.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{row.type}</p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1 max-w-[200px] ml-auto">
+                            <div className="flex justify-between text-[9px] font-bold uppercase">
+                              <span className="text-slate-400">Budget: {formatINR(row.budgetAmount)}</span>
+                              <span className={cn(row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
+                                Actual: {formatINR(row.actualAmount)}
+                              </span>
+                            </div>
+                            <Progress 
+                              value={Math.min((row.actualAmount / (row.budgetAmount || 1)) * 100, 100)} 
+                              className={cn("h-2 rounded-full", row.status === 'OVER' ? 'bg-rose-100 [&>div]:bg-rose-500' : 'bg-slate-100 [&>div]:bg-emerald-500')} 
+                            />
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-right font-medium text-slate-500">{formatINR(row.budgetAmount)}</td>
-                        <td className="px-6 py-4 text-right font-bold text-slate-900">{formatINR(row.actualAmount)}</td>
                         <td className={cn("px-6 py-4 text-right font-bold", row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
                           {row.status === 'OVER' ? '+' : '-'}{formatINR(Math.abs(row.variance))}
                           <span className="text-[9px] ml-1 opacity-70">({row.variancePct}%)</span>
@@ -238,8 +243,11 @@ export default function OperationalPage() {
                   <tfoot className="bg-slate-50 font-bold border-t">
                     <tr>
                       <td className="px-6 py-4">TOTAL OPERATIONAL BURN</td>
-                      <td className="px-6 py-4 text-right">{formatINR(totalBudget)}</td>
-                      <td className="px-6 py-4 text-right">{formatINR(totalActual)}</td>
+                      <td className="px-6 py-4">
+                         <div className="space-y-1 max-w-[200px] ml-auto">
+                            <Progress value={totalProgress} className={cn("h-3 rounded-full", totalProgress > 100 ? "bg-rose-100 [&>div]:bg-rose-600" : "bg-emerald-100 [&>div]:bg-emerald-600")} />
+                         </div>
+                      </td>
                       <td className={cn("px-6 py-4 text-right", totalActual > totalBudget ? 'text-rose-600' : 'text-emerald-600')}>
                         {totalActual > totalBudget ? '+' : '-'}{formatINR(Math.abs(totalActual - totalBudget))}
                       </td>

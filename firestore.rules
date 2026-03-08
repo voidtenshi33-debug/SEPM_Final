@@ -1,105 +1,74 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * BUDGET VS ACTUAL - SECURITY RULES DOCUMENTATION
-     *
-     * Core Philosophy:
-     * This ruleset implements a Role-Based Access Control (RBAC) model specifically for 
-     * operational financial data. Access is restricted to users with the 'founder' role, 
-     * ensuring that sensitive budget targets and actual spend data are only accessible 
-     * to authorized leadership.
-     *
-     * Data Structure:
-     * - /budgets/{budgetMonthId}: A top-level collection where each document represents 
-     *   a specific month (e.g., '2026-03'). 
-     * - Individual category budgets are embedded directly within the monthly document 
-     *   as an array to ensure atomic updates and simplify authorization.
-     *
-     * Key Security Decisions:
-     * - Role Verification: Access is determined by the presence of a user's UID in a 
-     *   global `/roles_founder/` collection. This allows for centralized management 
-     *   of administrative permissions.
-     * - Path Consistency: The rules enforce that the document ID (e.g., '2026-03') 
-     *   matches the internal 'month' field to prevent data misalignment.
-     * - Immutability: Once a budget document is created for a specific month, the 
-     *   'month' field cannot be changed, preserving the integrity of historical records.
-     *
-     * Prototyping Mode:
-     * These rules prioritize strict authorization (who can access) over strict 
-     * schema validation (the shape of the data), allowing for rapid UI/UX iteration 
-     * while keeping financial data protected.
+     * UdyamRakshak Financial Module Security Rules
      */
 
-    // --- GLOBAL HELPER FUNCTIONS ---
-
-    /**
-     * @description Checks if a user is authenticated.
-     */
+    // --- Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user has the 'founder' role 
-     * by looking up their UID in a dedicated roles collection.
-     */
-    function isFounder() {
-      return exists(/databases/$(database)/documents/roles_founder/$(request.auth.uid));
+    function isExistingUserAuthorized() {
+      return isSignedIn() && resource != null;
     }
 
-    /**
-     * @description Combined check for updates and deletes to ensure the 
-     * user is authorized and the document exists.
-     */
-    function isExistingFounder() {
-      return isSignedIn() && isFounder() && resource != null;
+    // --- Collection Rules ---
+
+    match /financials/{monthId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
     }
 
-    // --- COLLECTION RULES ---
-
-    /**
-     * @description Monthly budget documents containing category-specific targets.
-     * @path /budgets/{budgetMonthId}
-     * @allow (get/list) Signed-in founders can view all monthly budgets.
-     * @deny (create) Mismatched budgetMonthId and internal 'month' field.
-     * @principle Role-based access control with enforced path/data consistency.
-     */
-    match /budgets/{budgetMonthId} {
-      
-      // READS: Grouped get and list
-      allow get, list: if isSignedIn() && isFounder();
-
-      // WRITES: Granular create, update, delete
-      
-      /**
-       * On creation, verify the user is a founder and the month field matches the ID.
-       */
-      allow create: if isSignedIn() && isFounder() && request.resource.data.month == budgetMonthId;
-
-      /**
-       * On update, verify founder status and ensure the month field is immutable.
-       */
-      allow update: if isExistingFounder() && request.resource.data.month == resource.data.month;
-
-      /**
-       * On delete, only founders can remove historical budget records.
-       */
-      allow delete: if isExistingFounder();
-    }
-
-    /**
-     * @description Global roles collection used for authorization lookups.
-     * @path /roles_founder/{userId}
-     * @allow (get) Any signed-in user can check if they have the role.
-     * @deny (write) No client-side modification of roles allowed.
-     * @principle Lockdown of sensitive authorization metadata.
-     */
-    match /roles_founder/{userId} {
+    match /startupProfile/main {
       allow get: if isSignedIn();
-      allow list, create, update, delete: if false;
+      allow write: if isSignedIn();
     }
 
+    match /expenseCategories/{categoryId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    match /expenses/{expenseId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    match /rounds/{roundId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    match /investors/{investorId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.roundId != null;
+      allow update: if isExistingUserAuthorized() && request.resource.data.roundId == resource.data.roundId;
+      allow delete: if isExistingUserAuthorized();
+    }
+
+    match /leadership/{memberId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    match /capitalStructure/main {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    match /budgets/{monthId} {
+      allow get, list: if isSignedIn();
+      allow write: if isSignedIn();
+    }
   }
 }
