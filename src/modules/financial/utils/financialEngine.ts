@@ -181,11 +181,11 @@ export const analyzeRiskProfile = (data: {
   }
 
   // 2. Governance Risk (Dilution)
-  if (data.totalInvestorPct > 45) {
+  if (data.totalInvestorPct > 40) {
     risks.push({ 
       level: 'CRITICAL', 
       label: 'Loss of Control', 
-      msg: 'Investor equity exceeds 45%. Founders may lose board control in the next round.', 
+      msg: 'Investor equity exceeds 40%. Founders may lose board control in the next round.', 
       icon: 'Users',
       action: 'Review Shareholder Agreement Control Clauses'
     });
@@ -341,7 +341,7 @@ export const calculateBudgetVariance = (actualAmount: number, budgetAmount: numb
  */
 export const calculateBreakEvenAnalysis = (fixedCosts: number, totalRevenue: number, variableCosts: number) => {
   if (totalRevenue <= 0) return null;
-  if (fixedCosts < 0) return { error: "Invalid fixed cost value." };
+  if (fixedCosts <= 0) return { error: "Invalid fixed cost value." };
 
   // 1. Contribution Margin: Money left after covering variable costs
   const contributionMargin = totalRevenue - variableCosts;
