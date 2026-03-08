@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from "react";
@@ -139,20 +138,22 @@ export default function CapitalPage() {
                   {rounds?.map((round) => {
                     const roundInvestors = investors?.filter(i => i.roundId === round.id) || [];
                     const actualRaised = roundInvestors.reduce((sum, i) => sum + (i.investmentAmount || 0), 0);
-                    const progress = Math.min((actualRaised / (round.targetRaise || 1)) * 100, 100);
-                    const isOverSubscribed = actualRaised > round.targetRaise;
+                    // Handle targetRaise from doc structure (if missing fallback to round.amountRaised)
+                    const target = round.targetRaise || round.amountRaised || 1;
+                    const progress = Math.min((actualRaised / target) * 100, 100);
+                    const isOverSubscribed = actualRaised > target;
 
                     return (
                       <div key={round.id} className="p-5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="font-bold text-slate-900 text-xl font-headline">{round.roundName}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{round.roundType} Round</p>
+                            <p className="font-bold text-slate-900 text-xl font-headline">{round.roundName || round.name}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{round.roundType || 'Equity'} Round</p>
                           </div>
                           {isOverSubscribed ? (
                             <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 text-[9px] font-bold">Over-subscribed</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-tighter">{round.status}</Badge>
+                            <Badge variant="outline" className="text-[9px] font-bold uppercase tracking-tighter">{round.status || 'Active'}</Badge>
                           )}
                         </div>
                         
@@ -169,7 +170,7 @@ export default function CapitalPage() {
                           </div>
                           <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase pt-2 border-t border-slate-50">
                             <div className="flex items-center gap-1">
-                              <Target className="h-3 w-3" /> Target: {formatINR(round.targetRaise)}
+                              <Target className="h-3 w-3" /> Target: {formatINR(target)}
                             </div>
                             <div className="flex items-center gap-1 text-slate-600">
                               <Users className="h-3 w-3" /> {roundInvestors.length} Investors
@@ -224,7 +225,7 @@ export default function CapitalPage() {
                            </td>
                            <td className="px-6 py-4">
                              <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100 text-[9px] font-bold">
-                               {round?.roundName || 'Direct Allotment'}
+                               {round?.roundName || round?.name || 'Direct Allotment'}
                              </Badge>
                            </td>
                            <td className="px-6 py-4 text-right font-bold text-slate-700">
