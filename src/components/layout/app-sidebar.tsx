@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -88,6 +89,8 @@ export function AppSidebar() {
   const userName = user?.displayName || "Founder";
 
   const handleLogout = async () => {
+    // Clear session entry signal
+    sessionStorage.removeItem('startupos_launched');
     await signOut(auth);
     router.push("/welcome");
   };

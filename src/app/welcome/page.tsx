@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from "react"
@@ -14,7 +15,9 @@ export default function WelcomePage() {
 
   const handleLaunch = () => {
     setIsLaunching(true);
-    // Explicitly push to dashboard only when user clicks
+    // Register session entry signal
+    sessionStorage.setItem('startupos_launched', 'true');
+    // Explicitly push to dashboard
     router.push("/");
   };
 

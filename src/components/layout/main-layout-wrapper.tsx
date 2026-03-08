@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useEffect } from "react"
@@ -12,10 +13,13 @@ export function MainLayoutWrapper({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser()
   const isPublicPage = pathname === "/welcome"
 
-  // Route Guard: Redirect to welcome if not authenticated and trying to access app
+  // Route Guard: Redirect to welcome if not authenticated OR if app hasn't been launched in this session
   useEffect(() => {
-    if (!isUserLoading && !user && !isPublicPage) {
-      router.push("/welcome")
+    if (!isUserLoading && !isPublicPage) {
+      const isLaunched = sessionStorage.getItem('startupos_launched') === 'true';
+      if (!user || !isLaunched) {
+        router.push("/welcome");
+      }
     }
   }, [user, isUserLoading, isPublicPage, router])
 
@@ -35,8 +39,9 @@ export function MainLayoutWrapper({ children }: { children: React.ReactNode }) {
     )
   }
 
-  // Don't render dashboard content if not logged in
-  if (!user) {
+  // Don't render dashboard content if not logged in or not launched
+  const isLaunched = typeof window !== 'undefined' && sessionStorage.getItem('startupos_launched') === 'true';
+  if (!user || !isLaunched) {
     return null
   }
 
