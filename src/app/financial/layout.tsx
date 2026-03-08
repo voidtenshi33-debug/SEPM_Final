@@ -36,7 +36,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-12">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6 px-2 md:px-0">
         <PageHeader 
           title="Financial War Room" 
           description="Strategic oversight of operational performance, sales growth, and capital structure."
@@ -48,7 +48,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* Sub-Navigation Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto no-scrollbar">
+      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto no-scrollbar bg-white/50 backdrop-blur-sm sticky top-16 z-30 -mx-6 px-6">
         {subNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -56,7 +56,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all border-b-2 whitespace-nowrap",
+                "flex items-center gap-2 px-6 py-4 text-sm font-semibold transition-all border-b-2 whitespace-nowrap",
                 isActive 
                   ? "border-accent text-accent bg-accent/5" 
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-50"
