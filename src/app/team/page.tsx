@@ -1,10 +1,27 @@
 'use client';
 
-import React from "react";
+import React, { useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, Shield, Award, Copy, TrendingUp, Clock, AlertCircle, UserCheck, Activity } from "lucide-react";
+import { 
+  Mail, 
+  Shield, 
+  Award, 
+  Copy, 
+  TrendingUp, 
+  Clock, 
+  AlertCircle, 
+  UserCheck, 
+  Activity, 
+  Trophy, 
+  Loader2, 
+  ArrowRight,
+  ShieldAlert,
+  Zap,
+  ListTodo,
+  ExternalLink
+} from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
@@ -14,10 +31,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const COLORS = ["bg-slate-900", "bg-blue-600", "bg-indigo-600", "bg-emerald-600", "bg-amber-600", "bg-rose-600"];
 
-export default function TeamPage() {
+export default function TeamManagementPage() {
   const db = useFirestore();
   const { toast } = useToast();
   
@@ -27,142 +52,294 @@ export default function TeamPage() {
   const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
   const { data: tasks } = useCollection(tasksQuery);
 
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+
+  if (loadingLead) return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    </div>
+  );
+
+  // Team Summary Logic
+  const memberPerformances = leadership?.map(m => {
+    const memberTasks = tasks?.filter(t => t.assignedTo === m.name) || [];
+    return { ...m, performance: calculateMemberPerformance(memberTasks) };
+  }) || [];
+
+  const avgTeamScore = memberPerformances.length > 0 
+    ? Math.round(memberPerformances.reduce((acc, curr) => acc + curr.performance.score, 0) / memberPerformances.length)
+    : 0;
+
+  const topPerformer = [...memberPerformances].sort((a, b) => b.performance.score - a.performance.score)[0];
+  const totalActiveTasks = tasks?.filter(t => t.status !== 'Completed').length || 0;
+  const totalOverdueTasks = tasks?.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length || 0;
+
   const copyInviteLink = (memberId: string) => {
     const link = `${window.location.origin}/accept-invite?id=${memberId}`;
     navigator.clipboard.writeText(link);
-    toast({
-      title: "Invite Link Copied!",
-      description: "Send this to the leader to finalize access.",
-    });
+    toast({ title: "Invite Link Copied!" });
   };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <PageHeader 
-        title="Performance & Accountability" 
-        description="Unified oversight of team reliability, equity vesting, and execution throughput."
+        title="Team Intelligence" 
+        description="Data-driven leadership oversight, accountability indexing, and execution load monitoring."
         actions={<AddLeadershipModal />}
       />
 
+      {/* TEAM OVERVIEW PANEL */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-none shadow-sm bg-[#0F172A] text-white">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Avg Team Score</p>
+              <Activity className="h-4 w-4 text-blue-400" />
+            </div>
+            <p className="text-3xl font-bold">{avgTeamScore}%</p>
+            <p className="text-[10px] text-slate-500 mt-2 font-medium">Aggregate execution velocity</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active load</p>
+            <p className="text-3xl font-bold text-slate-900">{totalActiveTasks}</p>
+            <div className="flex items-center gap-1 text-[10px] text-slate-500 mt-2 font-bold uppercase">
+              <ListTodo className="h-3 w-3" /> Across {leadership?.length || 0} leaders
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm">
+          <CardContent className="p-6">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue Risk</p>
+            <p className={`text-3xl font-bold ${totalOverdueTasks > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{totalOverdueTasks}</p>
+            <div className="flex items-center gap-1 text-[10px] text-rose-500 mt-2 font-bold uppercase">
+              <ShieldAlert className="h-3 w-3" /> Critical bottlenecks
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-emerald-50/50 border border-emerald-100">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Top Performer</p>
+              <Trophy className="h-4 w-4 text-emerald-600" />
+            </div>
+            <p className="text-lg font-bold text-emerald-900 truncate">{topPerformer?.name || 'Calculating...'}</p>
+            <p className="text-[10px] text-emerald-600 mt-1 font-bold">{topPerformer?.performance.score}% MERIT SCORE</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* MEMBER CARDS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {leadership?.map((member, idx) => {
+        {memberPerformances.map((member, idx) => {
+          const isTop = member.name === topPerformer?.name && member.performance.score > 85;
           const vestProgress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
-          const isPending = member.inviteStatus === "Pending";
           
-          const memberTasks = tasks?.filter(t => t.assignedTo === member.name) || [];
-          const performance = calculateMemberPerformance(memberTasks);
-
           return (
-            <Card key={member.id} className="border-none shadow-xl hover:shadow-2xl transition-all overflow-hidden border-l-4" style={{ borderLeftColor: isPending ? '#F59E0B' : '#10B981' }}>
-              <CardHeader className="pb-4 bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-14 w-14 border-2 border-white shadow-md">
-                    <AvatarFallback className={`${COLORS[idx % COLORS.length]} text-white font-bold text-lg`}>
-                      {member.name.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-slate-900 truncate text-lg">{member.name}</h3>
-                      <Badge className={performance.score > 80 ? "bg-emerald-500" : performance.score > 50 ? "bg-amber-500" : "bg-rose-500"}>
-                        {performance.score}%
-                      </Badge>
+            <Sheet key={member.id}>
+              <SheetTrigger asChild>
+                <Card className="border-none shadow-md hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden">
+                  {isTop && (
+                    <div className="absolute top-0 right-0 p-3">
+                      <Trophy className="h-5 w-5 text-amber-500" />
                     </div>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{member.title}</p>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6 space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Load</p>
-                    <p className="text-xl font-bold text-slate-900">{performance.active} Tasks</p>
-                  </div>
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue</p>
-                    <p className={`text-xl font-bold ${performance.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{performance.overdue}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
-                      <span>Reliability Index</span>
-                      <span className="text-blue-600">{performance.reliability}%</span>
-                    </div>
-                    <Progress value={performance.reliability} className="h-1.5 [&>div]:bg-blue-500" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
-                      <span>Equity Vested</span>
-                      <span>{vestProgress}%</span>
-                    </div>
-                    <Progress value={parseFloat(vestProgress)} className="h-1.5" />
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  {isPending ? (
-                    <Button 
-                      variant="default" 
-                      className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase h-9"
-                      onClick={() => copyInviteLink(member.id)}
-                    >
-                      <Copy className="h-3 w-3 mr-2" /> Invite Link
-                    </Button>
-                  ) : (
-                    <Button variant="outline" className="flex-1 text-[10px] font-bold uppercase h-9 border-slate-200">
-                      <Mail className="h-3 w-3 mr-2 text-slate-400" /> Send Message
-                    </Button>
                   )}
+                  <CardHeader className="pb-4 border-b border-slate-50">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <AvatarFallback className={`${COLORS[idx % COLORS.length]} text-white font-bold`}>
+                          {member.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-900 truncate flex items-center gap-2">
+                          {member.name}
+                          {member.performance.risk !== 'NORMAL' && (
+                            <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
+                          )}
+                        </h3>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{member.title}</p>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Merit Score</p>
+                        <p className={`text-2xl font-bold ${member.performance.score > 80 ? 'text-emerald-600' : member.performance.score > 50 ? 'text-blue-600' : 'text-rose-600'}`}>
+                          {member.performance.score}%
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Load</p>
+                        <p className="text-lg font-bold text-slate-700">{member.performance.active} Tasks</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-center">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">Reliability</p>
+                        <p className="text-xs font-bold text-slate-700">{member.performance.reliability}%</p>
+                      </div>
+                      <div className="p-2 rounded-lg bg-slate-50 border border-slate-100 text-center">
+                        <p className="text-[8px] font-bold text-slate-400 uppercase">Consistency</p>
+                        <p className="text-xs font-bold text-slate-700">{member.performance.consistency}%</p>
+                      </div>
+                    </div>
+
+                    {member.performance.risk !== 'NORMAL' && (
+                      <Badge variant="destructive" className="w-full justify-center py-1 text-[8px] font-bold uppercase tracking-widest animate-pulse">
+                        RISK: {member.performance.risk.replace('_', ' ')}
+                      </Badge>
+                    )}
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                      <span className="text-[9px] font-bold text-slate-400 uppercase">Vesting: {vestProgress}%</span>
+                      <Button variant="ghost" size="sm" className="h-6 text-[9px] font-bold uppercase text-blue-600 hover:bg-blue-50">
+                        View Audit <ArrowRight className="ml-1 h-3 w-3" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </SheetTrigger>
+              
+              <SheetContent className="sm:max-w-[540px] overflow-y-auto">
+                <SheetHeader className="pb-6 border-b">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-16 w-16">
+                      <AvatarFallback className={`${COLORS[idx % COLORS.length]} text-white text-xl font-bold`}>
+                        {member.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <SheetTitle className="text-2xl font-bold">{member.name}</SheetTitle>
+                      <SheetDescription className="font-bold text-blue-600 uppercase text-xs tracking-widest">
+                        {member.title} • {member.performance.score}% MERIT SCORE
+                      </SheetDescription>
+                    </div>
+                  </div>
+                </SheetHeader>
+
+                <div className="py-8 space-y-8">
+                  {/* Performance Breakdown */}
+                  <section className="space-y-4">
+                    <h4 className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
+                      <Activity className="h-4 w-4" /> Performance Breakdown
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <Card className="p-4 bg-slate-50/50">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">On-Time Completion</p>
+                        <p className="text-2xl font-bold text-slate-900">{member.performance.reliability}%</p>
+                        <Progress value={member.performance.reliability} className="h-1 mt-2" />
+                      </Card>
+                      <Card className="p-4 bg-slate-50/50">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Update Consistency</p>
+                        <p className="text-2xl font-bold text-slate-900">{member.performance.consistency}%</p>
+                        <Progress value={member.performance.consistency} className="h-1 mt-2" />
+                      </Card>
+                    </div>
+                  </section>
+
+                  {/* Issue Resolution Panel */}
+                  {member.performance.risk !== 'NORMAL' && (
+                    <section className="p-6 rounded-2xl bg-rose-50 border border-rose-100 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-xl bg-rose-100 text-rose-600">
+                          <ShieldAlert className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-rose-900">ISSUE: {member.performance.risk.replace('_', ' ')}</h4>
+                          <p className="text-xs text-rose-700">Detected bottleneck in execution flow.</p>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-rose-400 uppercase">Suggested Resolutions</p>
+                        <ul className="space-y-2">
+                          <li className="flex items-center gap-2 text-xs text-rose-800 bg-white/50 p-2 rounded-lg border border-rose-100">
+                            <Zap className="h-3.5 w-3.5" /> Reassign {member.performance.overdue} overdue tasks
+                          </li>
+                          <li className="flex items-center gap-2 text-xs text-rose-800 bg-white/50 p-2 rounded-lg border border-rose-100">
+                            <Zap className="h-3.5 w-3.5" /> Schedule 15m tactical sync
+                          </li>
+                        </ul>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs h-9">Reassign Tasks</Button>
+                        <Button variant="outline" className="flex-1 text-xs h-9 border-rose-200 text-rose-700">Log Action</Button>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Task Audit */}
+                  <section className="space-y-4">
+                    <h4 className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
+                      <ListTodo className="h-4 w-4" /> Tactical Audit
+                    </h4>
+                    <div className="space-y-3">
+                      {(tasks?.filter(t => t.assignedTo === member.name) || []).map(task => (
+                        <div key={task.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:border-blue-200 transition-all group">
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{task.title}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[8px] font-bold uppercase">{task.status}</Badge>
+                              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                <Clock className="h-3 w-3" /> {task.deadline}
+                              </span>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <ExternalLink className="h-4 w-4 text-slate-300" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+
+                  {/* Administration */}
+                  <section className="pt-6 border-t space-y-4">
+                    <div className="flex gap-3">
+                      {member.inviteStatus === "Pending" ? (
+                        <Button onClick={() => copyInviteLink(member.id)} className="flex-1 bg-amber-600 text-white text-xs font-bold uppercase h-10">
+                          <Copy className="h-4 w-4 mr-2" /> Re-copy Invite
+                        </Button>
+                      ) : (
+                        <Button className="flex-1 bg-blue-600 text-white text-xs font-bold uppercase h-10">
+                          <Mail className="h-4 w-4 mr-2" /> Message Leader
+                        </Button>
+                      )}
+                      <Button variant="outline" className="flex-1 text-xs font-bold uppercase h-10 border-slate-200">
+                        <Shield className="h-4 w-4 mr-2 text-slate-400" /> Adjust Shares
+                      </Button>
+                    </div>
+                  </section>
                 </div>
-              </CardContent>
-            </Card>
+              </SheetContent>
+            </Sheet>
           );
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
-        <Card className="border-none shadow-xl bg-[#0F172A] text-white p-8">
-          <div className="flex items-start gap-6">
-             <div className="p-3 rounded-2xl bg-blue-500/20">
-                <Shield className="h-8 w-8 text-blue-400" />
-             </div>
-             <div>
-                <h3 className="text-xl font-bold mb-2 font-headline">Accountability Layer</h3>
-                <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Performance scores are dynamically calculated using on-time task completion, reliability indexing, and execution throughput. This data is confidential and used for bonus approvals.
-                </p>
-                <div className="flex gap-8">
-                  <div>
-                    <p className="text-2xl font-bold text-blue-400">{leadership?.length || 0}</p>
-                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Total Leaders</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-emerald-400">{tasks?.filter(t => t.status === 'Completed').length || 0}</p>
-                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Tasks Shipped</p>
-                  </div>
-                </div>
-             </div>
+      <div className="p-8 bg-[#0F172A] text-white rounded-3xl relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+          <Shield className="h-40 w-40" />
+        </div>
+        <div className="relative z-10 space-y-4">
+          <div className="flex items-center gap-3">
+            <Award className="h-8 w-8 text-amber-400" />
+            <h3 className="text-2xl font-bold font-headline">Meritocracy Protocol</h3>
           </div>
-        </Card>
-
-        <Card className="border-none shadow-xl bg-emerald-50/30 border border-emerald-100 p-8">
-          <div className="flex items-start gap-6">
-             <div className="p-3 rounded-2xl bg-emerald-500/20">
-                <Award className="h-8 w-8 text-emerald-600" />
-             </div>
-             <div>
-                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity Enforcement</h3>
-                <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Members with performance scores &gt; 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
-                </p>
-                <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
-                   <Clock className="h-4 w-4 mr-2" /> Performance Audit
-                </Button>
-             </div>
+          <p className="text-slate-400 text-base leading-relaxed max-w-3xl">
+            StartupOS automatically enforces a performance-based equity culture. Scores are derived from on-time milestones and consistent weekly updates. Members with scores &gt; 90% are prioritized for bonus recognition and future grant approvals.
+          </p>
+          <div className="flex gap-4 pt-4">
+            <Badge className="bg-blue-500/20 text-blue-400 border-none px-4 py-1">Accountability: Active</Badge>
+            <Badge className="bg-emerald-500/20 text-emerald-400 border-none px-4 py-1">Audit Log: Secured</Badge>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );
