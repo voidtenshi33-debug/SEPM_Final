@@ -6,6 +6,7 @@ import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 
 /**
  * Custom hook to provide real-time financial and governance data.
+ * Synchronized with refined backend.json schema.
  */
 export function useFinancials(selectedMonth?: string) {
   const firestore = useFirestore();
@@ -19,10 +20,10 @@ export function useFinancials(selectedMonth?: string) {
     return query(collection(firestore, "financials"), orderBy("id", "desc"), limit(12));
   }, [firestore, user, isUserLoading]);
   
-  // 2. Funding Rounds
+  // 2. Funding Rounds - Order by roundDate per schema
   const roundsQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null;
-    return query(collection(firestore, "rounds"), orderBy("startDate", "desc"));
+    return query(collection(firestore, "rounds"), orderBy("roundDate", "desc"));
   }, [firestore, user, isUserLoading]);
 
   // 3. Investors
@@ -49,7 +50,7 @@ export function useFinancials(selectedMonth?: string) {
     return query(collection(firestore, "expenseCategories"), orderBy("name", "asc"));
   }, [firestore, user, isUserLoading]);
 
-  // 7. Expenses for selected month
+  // 7. All Expenses
   const expensesQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null;
     return collection(firestore, "expenses");

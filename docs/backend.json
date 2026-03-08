@@ -90,6 +90,8 @@
         "postMoneyValuation": { "type": "number" },
         "amountRaised": { "type": "number" },
         "equityDilutedPct": { "type": "number" },
+        "roundType": { "type": "string", "enum": ["Equity", "Debt", "Convertible", "SAFE"] },
+        "status": { "type": "string", "enum": ["Open", "Closed"] },
         "roundDate": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "amountRaised", "equityDilutedPct"]

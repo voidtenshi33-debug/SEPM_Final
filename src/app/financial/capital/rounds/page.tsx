@@ -13,7 +13,7 @@ import { Rocket, Target, Calendar, Users } from "lucide-react";
 
 export default function RoundsPage() {
   const db = useFirestore();
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('startDate', 'desc')), [db]);
+  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('roundDate', 'desc')), [db]);
   const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
 
   const { data: rounds, isLoading } = useCollection(roundsQuery);
@@ -32,7 +32,9 @@ export default function RoundsPage() {
           const roundInvestors = investors?.filter(i => i.roundId === round.id) || [];
           const actualRaised = roundInvestors.reduce((sum, i) => sum + (i.investmentAmount || 0), 0);
           const postMoney = calculatePostMoney(round.preMoneyValuation || 0, actualRaised);
-          const progress = Math.min((actualRaised / (round.targetRaise || 1)) * 100, 100);
+          // Fallback to preMoneyValuation + amountRaised if needed
+          const target = round.targetRaise || round.amountRaised || 1;
+          const progress = Math.min((actualRaised / target) * 100, 100);
 
           return (
             <Card key={round.id} className="border-none shadow-xl overflow-hidden group">
@@ -42,13 +44,13 @@ export default function RoundsPage() {
                   <div className="p-6 space-y-4">
                     <div>
                       <Badge variant={round.status === 'Open' ? 'default' : 'secondary'} className="mb-2">
-                        {round.status}
+                        {round.status || 'Active'}
                       </Badge>
-                      <h3 className="text-2xl font-bold text-slate-900">{round.roundName}</h3>
-                      <p className="text-sm text-muted-foreground">{round.roundType} Round</p>
+                      <h3 className="text-2xl font-bold text-slate-900">{round.name}</h3>
+                      <p className="text-sm text-muted-foreground">{round.roundType || 'Equity'} Round</p>
                     </div>
                     <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                      <Calendar className="h-3 w-3" /> Started: {round.startDate}
+                      <Calendar className="h-3 w-3" /> Date: {round.roundDate ? new Date(round.roundDate).toLocaleDateString() : 'N/A'}
                     </div>
                   </div>
 
@@ -56,7 +58,7 @@ export default function RoundsPage() {
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Capital Raised</p>
                       <p className="text-2xl font-bold text-slate-900">{formatINR(actualRaised)}</p>
-                      <p className="text-xs text-slate-500 italic">Target: {formatINR(round.targetRaise)}</p>
+                      <p className="text-xs text-slate-500 italic">Target: {formatINR(target)}</p>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-[10px] font-bold">

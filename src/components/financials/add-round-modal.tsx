@@ -35,21 +35,18 @@ export function AddRoundModal() {
     const roundType = formData.get("roundType") as string;
     const preMoneyValuation = Number(formData.get("preMoneyValuation"));
     const targetRaise = Number(formData.get("targetRaise"));
-    const equityOfferedPct = Number(formData.get("equityOfferedPct"));
-    const startDate = formData.get("startDate") as string;
+    const equityDilutedPct = Number(formData.get("equityDilutedPct"));
+    const roundDate = formData.get("roundDate") as string;
 
     try {
       await addDoc(collection(firestore, "rounds"), {
-        roundName,
+        name: roundName,
         roundType,
         preMoneyValuation,
-        targetRaise,
         amountRaised: 0, // Securing consistency with Ledger increment
-        equityOfferedPct,
-        startDate: new Date(startDate).toISOString(),
-        closeDate: null,
+        equityDilutedPct,
+        roundDate: new Date(roundDate).toISOString(),
         status: "Open",
-        totalInvestors: 0,
         createdAt: serverTimestamp(),
       });
       
@@ -117,12 +114,12 @@ export function AddRoundModal() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="equityOfferedPct">Equity Offered %</Label>
-              <Input id="equityOfferedPct" name="equityOfferedPct" type="number" step="0.01" required />
+              <Label htmlFor="equityDilutedPct">Dilution %</Label>
+              <Input id="equityDilutedPct" name="equityDilutedPct" type="number" step="0.01" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
-              <Input id="startDate" name="startDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+              <Label htmlFor="roundDate">Round Date</Label>
+              <Input id="roundDate" name="roundDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
             </div>
           </div>
           <DialogFooter>
