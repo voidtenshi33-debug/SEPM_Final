@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -6,9 +7,8 @@ import { initiateEmailSignIn, initiateEmailSignUp, initiateAnonymousSignIn } fro
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Mail, Lock, UserPlus, LogIn, ShieldCheck } from 'lucide-react';
+import { Loader2, Mail, Lock, UserPlus, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function AuthForm() {
@@ -49,81 +49,71 @@ export function AuthForm() {
   };
 
   return (
-    <Card className="w-full border-none bg-transparent text-white">
-      <CardHeader className="px-0 pt-0">
-        <CardTitle className="text-2xl font-bold flex items-center gap-2">
-          <ShieldCheck className="text-blue-500 h-6 w-6" />
-          Founder Portal
-        </CardTitle>
-        <CardDescription className="text-slate-400">
-          Secure access to your startup's strategic intelligence.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-0">
-        <Tabs defaultValue="login" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-xl border border-white/10">
-            <TabsTrigger value="login" className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white">Login</TabsTrigger>
-            <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-blue-600 data-[state=active]:text-white">Join</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="login" className="space-y-4 animate-in fade-in duration-300">
-            <form onSubmit={handleSignIn} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Corporate Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input id="login-email" name="email" type="email" placeholder="founder@startup.os" className="pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
-                </div>
+    <div className="w-full text-white">
+      <Tabs defaultValue="login" className="space-y-8">
+        <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-xl border border-white/10">
+          <TabsTrigger value="login" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">Login</TabsTrigger>
+          <TabsTrigger value="signup" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">Join</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="login" className="space-y-6 animate-in fade-in duration-300">
+          <form onSubmit={handleSignIn} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="login-email" className="text-xs font-bold uppercase tracking-widest text-slate-500">Corporate Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input id="login-email" name="email" type="email" placeholder="founder@startup.os" className="h-12 pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white placeholder:text-slate-600" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Access Key</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input id="login-password" name="password" type="password" placeholder="••••••••" className="pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
-                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password" className="text-xs font-bold uppercase tracking-widest text-slate-500">Access Key</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input id="login-password" name="password" type="password" placeholder="••••••••" className="h-12 pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 h-12 font-bold rounded-xl shadow-lg shadow-blue-500/20">
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><LogIn className="h-4 w-4 mr-2" /> Authenticate Session</>}
-              </Button>
-            </form>
-          </TabsContent>
+            </div>
+            <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-base font-bold rounded-2xl shadow-xl shadow-blue-500/20 group">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><LogIn className="h-5 w-5 mr-2 transition-transform group-hover:translate-x-1" /> Authenticate</>}
+            </Button>
+          </form>
+        </TabsContent>
 
-          <TabsContent value="signup" className="space-y-4 animate-in fade-in duration-300">
-            <form onSubmit={handleSignUp} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="signup-email">Corporate Email</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input id="signup-email" name="email" type="email" placeholder="founder@startup.os" className="pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
-                </div>
+        <TabsContent value="signup" className="space-y-6 animate-in fade-in duration-300">
+          <form onSubmit={handleSignUp} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="signup-email" className="text-xs font-bold uppercase tracking-widest text-slate-500">Corporate Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input id="signup-email" name="email" type="email" placeholder="founder@startup.os" className="h-12 pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white placeholder:text-slate-600" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="signup-password">Secure Access Key</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                  <Input id="signup-password" name="password" type="password" placeholder="••••••••" className="pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
-                </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="signup-password" className="text-xs font-bold uppercase tracking-widest text-slate-500">Secure Access Key</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                <Input id="signup-password" name="password" type="password" placeholder="••••••••" className="h-12 pl-10 bg-white/5 border-white/10 focus:border-blue-500 text-white" required />
               </div>
-              <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 h-12 font-bold rounded-xl shadow-lg shadow-blue-500/20">
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-4 w-4 mr-2" /> Initialize Account</>}
-              </Button>
-            </form>
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-      <CardFooter className="px-0 flex flex-col gap-4">
+            </div>
+            <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-base font-bold rounded-2xl shadow-xl shadow-blue-500/20 group">
+              {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><UserPlus className="h-5 w-5 mr-2 transition-transform group-hover:scale-110" /> Create Account</>}
+            </Button>
+          </form>
+        </TabsContent>
+      </Tabs>
+
+      <div className="mt-10 space-y-6">
         <div className="relative w-full">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/10"></span></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-widest"><span className="bg-[#020617] px-2 text-slate-500">Or continue as</span></div>
+          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
+          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.2em]"><span className="bg-transparent px-4 text-slate-600">Prototyping Only</span></div>
         </div>
         <Button 
           variant="ghost" 
           onClick={() => initiateAnonymousSignIn(auth)} 
-          className="w-full text-slate-400 hover:text-white hover:bg-white/5 h-10 text-xs font-bold uppercase tracking-widest"
+          className="w-full text-slate-500 hover:text-white hover:bg-white/5 h-12 text-xs font-bold uppercase tracking-widest border border-white/5 rounded-2xl"
         >
-          Temporary Guest Mode
+          Initialize Guest Session
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
