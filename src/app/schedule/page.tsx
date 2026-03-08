@@ -3,7 +3,7 @@
 
 import React, { useState } from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,9 +139,7 @@ export default function SchedulePage() {
       <Card className="border-none shadow-xl bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="relative p-8">
-            {/* Timeline Vertical Line */}
             <div className="absolute left-[47px] top-8 bottom-8 w-px bg-slate-100 hidden md:block" />
-
             <div className="space-y-8 relative">
               {isLoading ? (
                 <div className="flex items-center justify-center py-20">
@@ -190,21 +188,6 @@ export default function SchedulePage() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="bg-[#0F172A] p-8 rounded-3xl text-white flex items-start gap-6 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-          <Clock className="h-32 w-32" />
-        </div>
-        <div className="p-3 rounded-2xl bg-blue-500/20 text-blue-400">
-          <CheckCircle2 className="h-6 w-6" />
-        </div>
-        <div className="space-y-2 relative z-10">
-          <h4 className="text-xl font-bold font-headline">Time Blocking Protocol</h4>
-          <p className="text-slate-400 text-sm leading-relaxed max-w-2xl">
-            Founder energy is your scarcest resource. UdyamRakshak enforces tactical focus by syncing your schedule with the Strategy Map. Ensure at least 4 hours of <strong>Deep Work</strong> daily to maintain execution velocity.
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

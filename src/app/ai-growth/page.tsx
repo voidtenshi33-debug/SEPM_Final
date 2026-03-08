@@ -6,19 +6,17 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  Activity, 
   TrendingUp, 
   Zap, 
-  Target, 
-  AlertCircle, 
-  CheckCircle2, 
-  ArrowUpRight, 
-  Rocket, 
   BrainCircuit, 
   BarChart3,
   Loader2,
   ShieldCheck,
-  TrendingDown
+  Rocket,
+  Target,
+  ArrowUpRight,
+  Activity,
+  AlertCircle
 } from "lucide-react";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -56,7 +54,6 @@ export default function AIGrowthPage() {
     );
   }
 
-  // Context Data Preparation
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const margin = latestMonth ? calcEBITDAMargin(ebitda, latestMonth.netRevenue) : 0;
   const runway = calculateRunway(42000000, latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0);
@@ -68,7 +65,7 @@ export default function AIGrowthPage() {
       }, 0) / projects.length
     : 0;
 
-  const marketStats = { industryGrowthRate: 18 }; // Industry standard benchmark
+  const marketStats = { industryGrowthRate: 18 };
   const context = {
     runway,
     revenueTrend: financials.length > 1 && financials[0].netRevenue > financials[1].netRevenue ? 'Up' : 'Stable',
@@ -78,12 +75,11 @@ export default function AIGrowthPage() {
   const verdict = generateStrategicVerdict(context, { avgProgress }, marketStats);
   const actions = getPriorityActions(verdict, profile?.businessType || 'Hybrid');
 
-  // Radar Chart Data
   const radarData = [
     { subject: 'Finance', value: Math.min(100, (runway / 12) * 100), fullMark: 100 },
     { subject: 'Execution', value: avgProgress, fullMark: 100 },
-    { subject: 'Market', value: 65, fullMark: 100 }, // Mock market penetration
-    { subject: 'Product', value: 80, fullMark: 100 }, // Mock product maturity
+    { subject: 'Market', value: 65, fullMark: 100 },
+    { subject: 'Product', value: 80, fullMark: 100 },
     { subject: 'Team', value: 75, fullMark: 100 },
   ];
 
@@ -130,7 +126,6 @@ export default function AIGrowthPage() {
         description="Data-driven situational verdicts and strategic expansion modeling."
       />
 
-      {/* SECTION A — Business Snapshot (Health Check) */}
       <section className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="border-none shadow-md">
@@ -201,7 +196,6 @@ export default function AIGrowthPage() {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-        {/* SECTION B — Market & Competitive Context */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 px-1">
             <ShieldCheck className="h-5 w-5 text-accent" />
@@ -261,7 +255,6 @@ export default function AIGrowthPage() {
           </Card>
         </section>
 
-        {/* SECTION D — Strategic Strength Radar */}
         <section className="space-y-6">
           <div className="flex items-center gap-2 px-1">
             <BarChart3 className="h-5 w-5 text-accent" />
@@ -286,7 +279,6 @@ export default function AIGrowthPage() {
         </section>
       </div>
 
-      {/* SECTION C — Priority Actions (Actionable) */}
       <section className="space-y-6">
         <div className="flex items-center gap-2 px-1">
           <Zap className="h-5 w-5 text-amber-500" />
@@ -310,7 +302,7 @@ export default function AIGrowthPage() {
                   <h4 className="text-xl font-bold mb-2">{action.title}</h4>
                   <p className="text-xs text-slate-400 italic mb-4">Why: {action.why}</p>
                   <div className="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                    <span>Risk: {action.risk}</span>
+                    <span>Risk: Medium</span>
                     <span>Type: {action.type}</span>
                   </div>
                 </div>

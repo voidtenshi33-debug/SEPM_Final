@@ -19,7 +19,6 @@ export const generateStrategicVerdict = (
 ): StrategicVerdict => {
   const { runway, revenueTrend, ebitdaMargin } = financials;
   const { avgProgress } = projectStats;
-  const { industryGrowthRate } = marketStats;
 
   // 1. Liquidity Risk
   if (runway < 6) {
@@ -40,7 +39,7 @@ export const generateStrategicVerdict = (
   }
 
   // 3. Scaling Mode
-  if (revenueTrend === 'Up' && avgProgress > 75 && industryGrowthRate > 10) {
+  if (revenueTrend === 'Up' && avgProgress > 75 && marketStats.industryGrowthRate > 10) {
     return {
       status: 'SCALING',
       color: 'green',
@@ -65,8 +64,7 @@ export const getPriorityActions = (verdict: StrategicVerdict, businessType: stri
       why: 'Runway is below critical 6-month threshold.',
       impact: 'Critical',
       risk: 'High',
-      type: 'Fundraising',
-      template: 'FUNDRAISING'
+      type: 'Fundraising'
     });
   }
 
@@ -76,8 +74,7 @@ export const getPriorityActions = (verdict: StrategicVerdict, businessType: stri
       why: 'Diversify revenue streams to improve stability.',
       impact: 'High',
       risk: 'Medium',
-      type: 'Product',
-      template: 'PRODUCT_LAUNCH'
+      type: 'Product'
     });
   }
 
@@ -87,20 +84,17 @@ export const getPriorityActions = (verdict: StrategicVerdict, businessType: stri
       why: 'Scaling operations requires high delivery efficiency.',
       impact: 'High',
       risk: 'Low',
-      type: 'Infrastructure',
-      template: 'MARKETING' // Generic infrastructure placeholder
+      type: 'Infrastructure'
     });
   }
 
-  // Always suggest enterprise expansion for stable/scaling
   if (verdict.status === 'SCALING' || verdict.status === 'STABLE') {
     actions.push({
       title: 'Enterprise Sales Blitz',
       why: 'Market demand is high and product maturity is sufficient.',
       impact: 'High',
       risk: 'Medium',
-      type: 'Growth',
-      template: 'MARKETING'
+      type: 'Growth'
     });
   }
 
