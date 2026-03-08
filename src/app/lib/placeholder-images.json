@@ -1,0 +1,23 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hero-dashboard",
+      "description": "A modern startup office environment with collaborative space.",
+      "imageUrl": "https://picsum.photos/seed/startup1/1200/400",
+      "imageHint": "startup office"
+    },
+    {
+      "id": "team-collaboration",
+      "description": "Team members working together around a laptop.",
+      "imageUrl": "https://picsum.photos/seed/team1/600/400",
+      "imageHint": "team collaboration"
+    },
+    {
+      "id": "finance-chart",
+      "description": "Financial charts and data visualization.",
+      "imageUrl": "https://picsum.photos/seed/finance1/600/400",
+      "imageHint": "financial data"
+    }
+  ]
+}
