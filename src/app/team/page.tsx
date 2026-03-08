@@ -1,62 +1,119 @@
-
 "use client";
 
+import * as React from "react";
+import { useFirestore, useCollection, useUser } from "@/firebase";
+import { collection, query, orderBy } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Plus, Mail, Linkedin } from "lucide-react";
-
-const team = [
-  { name: "John Doe", role: "CEO & Founder", status: "Active", initials: "JD" },
-  { name: "Jane Smith", role: "CTO", status: "Active", initials: "JS" },
-  { name: "Michael Chen", role: "Product Manager", status: "On Vacation", initials: "MC" },
-  { name: "Sarah Williams", role: "Full Stack Engineer", status: "Active", initials: "SW" },
-];
+import { Progress } from "@/components/ui/progress";
+import { Plus, Mail, Linkedin, Clock, Loader2, Copy, Check } from "lucide-react";
+import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
+import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function TeamPage() {
+  const db = useFirestore();
+  const { toast } = useToast();
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  const teamQuery = React.useMemo(() => query(collection(db, "leadership"), orderBy("name", "asc")), [db]);
+  const { data: team, isLoading } = useCollection(teamQuery);
+
+  const handleCopyLink = (id: string) => {
+    const url = `${window.location.origin}/accept-invite/${id}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    toast({
+      title: "Invite Link Copied",
+      description: "Send this URL to your team member to complete the handshake.",
+    });
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-sm text-muted-foreground">Syncing human capital data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Team Management</h1>
-          <p className="text-muted-foreground">Manage your human capital and coordination.</p>
+          <h1 className="text-3xl font-bold font-headline">Team & Governance</h1>
+          <p className="text-muted-foreground">Manage roles, equity grants, and real-time vesting progress.</p>
         </div>
-        <Button className="bg-accent">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Member
-        </Button>
+        <AddLeadershipModal />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {team.map((member, i) => (
-          <Card key={i} className="border-none shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-            <CardHeader className="text-center pb-2">
-              <Avatar className="h-20 w-20 mx-auto border-4 border-white shadow-sm">
-                <AvatarImage src={`https://picsum.photos/seed/${member.initials}/100/100`} />
-                <AvatarFallback>{member.initials}</AvatarFallback>
-              </Avatar>
-              <CardTitle className="mt-4">{member.name}</CardTitle>
-              <CardDescription>{member.role}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center gap-2 mb-4">
-                <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
-                  member.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                }`}>
-                  {member.status}
-                </span>
-              </div>
-              <div className="flex border-t pt-4 justify-around">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <Mail className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                  <Linkedin className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {team?.map((member) => {
+          const progress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
+          const initials = member.name.split(' ').map((n: string) => n[0]).join('');
+
+          return (
+            <Card key={member.id} className="border-none shadow-xl overflow-hidden hover:shadow-2xl transition-all group bg-white">
+              <CardHeader className="text-center pb-2">
+                <div className="relative mx-auto h-24 w-24 mb-4">
+                   <Avatar className="h-24 w-24 border-4 border-slate-50 shadow-sm">
+                    <AvatarImage src={`https://picsum.photos/seed/${member.id}/100/100`} />
+                    <AvatarFallback className="bg-slate-100 text-slate-400 font-bold">{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white ${member.inviteStatus === 'Accepted' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                </div>
+                <CardTitle className="text-xl font-bold">{member.name}</CardTitle>
+                <CardDescription className="font-medium text-accent">{member.title}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex justify-center gap-2">
+                  <Badge variant="outline" className={member.inviteStatus === 'Accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 uppercase text-[10px]' : 'bg-amber-50 text-amber-700 border-amber-100 uppercase text-[10px]'}>
+                    {member.inviteStatus || 'Pending'}
+                  </Badge>
+                  <Badge className="bg-primary text-white text-[10px]">{member.equityPct}% Equity</Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400 tracking-widest">
+                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> Vesting Progress</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <Progress value={parseFloat(progress)} className="h-1.5" />
+                  <p className="text-[10px] text-center text-slate-400 font-medium">Grant Date: {new Date(member.vestingStartDate).toLocaleDateString()}</p>
+                </div>
+
+                <div className="flex border-t pt-4 justify-center gap-4">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-primary transition-colors">
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-400 hover:text-blue-600 transition-colors">
+                    <Linkedin className="h-4 w-4" />
+                  </Button>
+                  {member.inviteStatus !== 'Accepted' && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 text-slate-400 hover:text-accent transition-colors"
+                      onClick={() => handleCopyLink(member.id)}
+                    >
+                      {copiedId === member.id ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+        {team?.length === 0 && (
+          <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl bg-slate-50/50">
+            <Plus className="h-12 w-12 text-slate-200 mx-auto mb-4" />
+            <p className="text-slate-400 font-medium">No team members recorded yet.</p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -13,12 +13,14 @@ import {
   Tooltip, 
   Legend 
 } from "recharts";
-import { AlertTriangle, ShieldCheck, UserPlus, Clock, Loader2 } from "lucide-react";
+import { AlertTriangle, ShieldCheck, UserPlus, Clock, Loader2, FileDown, Target } from "lucide-react";
 import { AddRoundModal } from "@/components/financials/add-round-modal";
 import { AddInvestorModal } from "@/components/financials/add-investor-modal";
 import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B'];
 
@@ -34,11 +36,13 @@ export default function CapitalPage() {
   const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
   const leadershipQuery = useMemoFirebase(() => collection(db, 'leadership'), [db]);
   const capRef = useMemoFirebase(() => doc(db, 'capitalStructure', 'main'), [db]);
+  const finQuery = useMemoFirebase(() => query(collection(db, "financials"), orderBy("month", "desc"), orderBy("month", "desc")), [db]);
 
   const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
   const { data: investors, isLoading: loadingInvestors } = useCollection(investorsQuery);
   const { data: leadership, isLoading: loadingLeadership } = useCollection(leadershipQuery);
   const { data: capTable, isLoading: loadingCap } = useDoc(capRef);
+  const { data: financials } = useCollection(finQuery);
 
   const isLoading = loadingRounds || loadingInvestors || loadingLeadership || loadingCap;
 
@@ -59,6 +63,30 @@ export default function CapitalPage() {
     capTable?.esopEquityPct || 0
   );
 
+  const handleExportInvestorReport = () => {
+    const doc = new jsPDF();
+    const latest = financials?.[0];
+    
+    doc.setFontSize(20);
+    doc.text("Investor Relations: Governance Brief", 14, 20);
+    
+    doc.setFontSize(10);
+    doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 14, 28);
+
+    autoTable(doc, {
+      startY: 40,
+      head: [['Metric', 'Value (INR)']],
+      body: [
+        ['Total Capital Raised', formatINR(rounds?.reduce((s, r) => s + r.amountRaised, 0) || 0)],
+        ['Active Monthly Revenue', formatINR(latest?.netRevenue || 0)],
+        ['Monthly Burn', formatINR(latest ? Math.max(0, latest.operatingExpenses - latest.netRevenue) : 0)],
+        ['Cap Table Integrity', isValidCap ? 'VALID' : 'OVERFLOW ALERT'],
+      ],
+    });
+
+    doc.save("UdyamRakshak_Investor_Brief.pdf");
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
@@ -70,6 +98,12 @@ export default function CapitalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+      <div className="flex justify-end">
+        <Button onClick={handleExportInvestorReport} variant="outline" className="border-accent text-accent">
+          <FileDown className="h-4 w-4 mr-2" /> Download Investor Report
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Cap Table Chart */}
         <Card className="border-none shadow-xl lg:col-span-1 h-fit sticky top-24">
@@ -138,11 +172,6 @@ export default function CapitalPage() {
                       </div>
                     </div>
                   ))}
-                  {leadership?.length === 0 && (
-                    <div className="col-span-full py-8 text-center border-2 border-dashed rounded-xl">
-                      <p className="text-sm text-muted-foreground">No leadership members recorded.</p>
-                    </div>
-                  )}
                </div>
             </CardContent>
           </Card>
@@ -169,11 +198,6 @@ export default function CapitalPage() {
                       </div>
                     </div>
                   ))}
-                  {rounds?.length === 0 && (
-                    <div className="col-span-full py-8 text-center border-2 border-dashed rounded-xl">
-                      <p className="text-sm text-muted-foreground">No funding rounds recorded.</p>
-                    </div>
-                  )}
                </div>
             </CardContent>
           </Card>
@@ -211,11 +235,6 @@ export default function CapitalPage() {
                          </tr>
                        );
                      })}
-                     {investors?.length === 0 && (
-                       <tr>
-                         <td colSpan={5} className="py-8 text-center text-muted-foreground italic">No investors recorded.</td>
-                       </tr>
-                     )}
                    </tbody>
                  </table>
                </div>
