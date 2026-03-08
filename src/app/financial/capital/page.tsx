@@ -7,7 +7,7 @@ import { collection, query, orderBy, doc } from "firebase/firestore";
 import { 
   validateEquity, 
   formatINR, 
-  calculateRemainingDealYears, 
+  calcRemainingTenure, 
   calculatePostMoney,
   calculateVestingProgress
 } from "@/modules/financial/utils/financialEngine";

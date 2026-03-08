@@ -35,6 +35,22 @@ export function calculateGrowth(current: number, previous: number): number {
 }
 
 /**
+ * Calculates remaining tenure in years for deals or vesting
+ */
+export const calcRemainingTenure = (endDate: string | Date | null): string => {
+  if (!endDate) return "0.0";
+  try {
+    const end = new Date(endDate).getTime();
+    const now = new Date().getTime();
+    const diff = end - now;
+    const years = diff / (1000 * 60 * 60 * 24 * 365.25);
+    return years > 0 ? years.toFixed(1) : "0.0";
+  } catch (e) {
+    return "0.0";
+  }
+};
+
+/**
  * Formats currency to INR (₹) using en-IN locale
  */
 export const formatINR = (amount: number | undefined | null): string =>
@@ -45,7 +61,7 @@ export const formatINR = (amount: number | undefined | null): string =>
   }).format(amount || 0);
 
 /**
- * Validates the cap table total equity split
+ * Validates if the cap table total equity split is exactly 100%
  */
 export function validateEquity(
   founderPct: number, 
@@ -68,45 +84,12 @@ export const calculatePostMoney = (preMoney: number, totalRaised: number): numbe
   (preMoney || 0) + (totalRaised || 0);
 
 /**
- * Calculates dilution based on a new round
+ * Calculates Average Order Value (AOV)
  */
-export const calculateDilution = (totalRaised: number, postMoney: number): number =>
-  postMoney > 0 ? (totalRaised / postMoney) * 100 : 0;
-
-/**
- * Calculates remaining tenure/deal years
- */
-export const calculateRemainingDealYears = (endDate: string | Date | null): string => {
-  if (!endDate) return "0.0";
-  try {
-    const end = new Date(endDate).getTime();
-    const now = new Date().getTime();
-    const diff = end - now;
-    const years = diff / (1000 * 60 * 60 * 24 * 365.25);
-    return years > 0 ? years.toFixed(1) : "0.0";
-  } catch (e) {
-    return "0.0";
-  }
-};
-
-/**
- * Calculates vesting progress percentage
- */
-export const calculateVestingProgress = (startDate: string | Date, years: number): string => {
-  if (!startDate || !years) return "0.0";
-  try {
-    const start = new Date(startDate).getTime();
-    const now = new Date().getTime();
-    const totalDuration = years * 365.25 * 24 * 60 * 60 * 1000;
-    const elapsed = now - start;
-    
-    if (elapsed <= 0) return "0.0";
-    const progress = (elapsed / totalDuration) * 100;
-    return Math.min(progress, 100).toFixed(1);
-  } catch (e) {
-    return "0.0";
-  }
-};
+export function calculateAOV(netRevenue: number, ordersCount: number): number {
+  if (ordersCount <= 0) return 0;
+  return (netRevenue || 0) / ordersCount;
+}
 
 /**
  * Product-specific sales metrics
@@ -129,7 +112,7 @@ export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
 });
 
 /**
- * Calculates Health Score
+ * Calculates Health Score (0-100) based on Rakshak (Protector) logic.
  */
 export const calculateHealthScore = (data: { 
   runway: number; 
@@ -144,6 +127,25 @@ export const calculateHealthScore = (data: {
   if (data.burnRate > data.netRevenue) score -= 15;
   if (data.founderEquity < 51) score -= 10;
   return Math.max(score, 0);
+};
+
+/**
+ * Calculates vesting progress percentage
+ */
+export const calculateVestingProgress = (startDate: string | Date, years: number): string => {
+  if (!startDate || !years) return "0.0";
+  try {
+    const start = new Date(startDate).getTime();
+    const now = new Date().getTime();
+    const totalDuration = years * 365.25 * 24 * 60 * 60 * 1000;
+    const elapsed = now - start;
+    
+    if (elapsed <= 0) return "0.0";
+    const progress = (elapsed / totalDuration) * 100;
+    return Math.min(progress, 100).toFixed(1);
+  } catch (e) {
+    return "0.0";
+  }
 };
 
 /**
