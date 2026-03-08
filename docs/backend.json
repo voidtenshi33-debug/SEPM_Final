@@ -1,49 +1,136 @@
 
 {
   "entities": {
-    "Category": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Category",
+    "Financial": {
+      "title": "Financial",
       "type": "object",
-      "description": "Defines a classification for financial transactions, such as an expense or income type, used for budgeting and tracking across the startup.",
+      "description": "Monthly financial performance data.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Category entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the financial category (e.g., 'Marketing Expenses', 'Salaries', 'Subscription Revenue')."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of what this category encompasses, providing clarity for financial reporting."
-        },
-        "type": {
-          "type": "string",
-          "description": "Indicates whether the category is for 'expense' or 'income', helping in financial categorization."
-        }
+        "id": { "type": "string", "description": "YYYY-MM format" },
+        "grossRevenue": { "type": "number" },
+        "discounts": { "type": "number" },
+        "netRevenue": { "type": "number" },
+        "operatingExpenses": { "type": "number" },
+        "cogs": { "type": "number" },
+        "unitsSold": { "type": "number" },
+        "ordersCount": { "type": "number" },
+        "activeClients": { "type": "number" },
+        "totalClients": { "type": "number" },
+        "retainedClients": { "type": "number" },
+        "billableHours": { "type": "number" },
+        "recurringRevenue": { "type": "number" },
+        "oneTimeRevenue": { "type": "number" },
+        "dateRecorded": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "type"
-      ]
+      "required": ["id", "grossRevenue", "netRevenue", "operatingExpenses"]
+    },
+    "StartupProfile": {
+      "title": "StartupProfile",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "businessType": { "type": "string", "enum": ["Product", "Service", "Hybrid"] },
+        "industry": { "type": "string" },
+        "teamSize": { "type": "number" },
+        "mission": { "type": "string" },
+        "governancePin": { "type": "string", "description": "A 4-digit secret PIN for sensitive financial operations." }
+      }
+    },
+    "ExpenseCategory": {
+      "title": "ExpenseCategory",
+      "type": "object",
+      "description": "Categories for business expenses.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Fixed", "Variable", "R&D"] },
+        "color": { "type": "string" }
+      },
+      "required": ["name", "type"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "type": "object",
+      "description": "Individual expense records.",
+      "properties": {
+        "id": { "type": "string" },
+        "monthId": { "type": "string", "description": "YYYY-MM" },
+        "categoryId": { "type": "string" },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["monthId", "categoryId", "amount"]
+    },
+    "Leadership": {
+      "title": "Leadership",
+      "type": "object",
+      "description": "Key team members with equity stakes.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "title": { "type": "string" },
+        "responsibility": { "type": "string" },
+        "equityPct": { "type": "number" },
+        "vestingYears": { "type": "number" },
+        "vestingStartDate": { "type": "string", "format": "date" },
+        "vestingEndDate": { "type": "string", "format": "date" },
+        "inviteStatus": { "type": "string", "enum": ["Pending", "Active"] }
+      },
+      "required": ["name", "title", "equityPct"]
+    },
+    "Round": {
+      "title": "Round",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "preMoneyValuation": { "type": "number" },
+        "postMoneyValuation": { "type": "number" },
+        "amountRaised": { "type": "number" },
+        "equityDilutedPct": { "type": "number" },
+        "roundDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "amountRaised", "equityDilutedPct"]
+    },
+    "Investor": {
+      "title": "Investor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "roundId": { "type": "string" },
+        "name": { "type": "string" },
+        "investmentAmount": { "type": "number" },
+        "equityPct": { "type": "number" },
+        "tenureYears": { "type": "number" },
+        "dealStartDate": { "type": "string", "format": "date" },
+        "dealEndDate": { "type": "string", "format": "date" },
+        "loyalty": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["Active", "Cancelled", "Exited"], "default": "Active" },
+        "cancelledAt": { "type": "string", "format": "date-time" },
+        "cancelledBy": { "type": "string" },
+        "cancellationReason": { "type": "string" }
+      },
+      "required": ["name", "investmentAmount", "equityPct", "roundId"]
+    },
+    "CapitalStructure": {
+      "title": "CapitalStructure",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "founderPct": { "type": "number" },
+        "esopPct": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["founderPct", "esopPct"]
     },
     "Budget": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Budget",
       "type": "object",
-      "description": "Represents a monthly budget target set by the startup personnel for various expense categories.",
+      "description": "Monthly budget allocations.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "The month ID in YYYY-MM format."
-        },
-        "month": {
-          "type": "string",
-          "description": "The specific month for this budget (YYYY-MM)."
-        },
+        "id": { "type": "string", "description": "YYYY-MM" },
         "categoryBudgets": {
           "type": "array",
           "items": {
@@ -54,51 +141,23 @@
             }
           }
         },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "month",
-        "categoryBudgets"
-      ]
-    },
-    "Leadership": {
-      "title": "Leadership",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "roleTitle": { "type": "string" },
-        "equityPct": { "type": "number" },
-        "vestingYears": { "type": "number" },
-        "vestingStartDate": { "type": "string" },
-        "vestingEndDate": { "type": "string" },
-        "inviteStatus": { "type": "string", "enum": ["Pending", "Active"] }
-      }
+      "required": ["id", "categoryBudgets"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "budgets/{monthId}",
-        "definition": {
-          "entityName": "Budget",
-          "schema": {
-            "$ref": "#/backend/entities/Budget"
-          },
-          "description": "Stores monthly budget targets for expense categories."
-        }
-      }
-    ]
+    "financials/{monthId}": { "schema": "Financial", "description": "Monthly financial snapshots." },
+    "startupProfile/main": { "schema": "StartupProfile", "description": "Core startup information." },
+    "expenseCategories/{categoryId}": { "schema": "ExpenseCategory", "description": "Business expense categories." },
+    "expenses/{expenseId}": { "schema": "Expense", "description": "Individual expense tracking entries." },
+    "leadership/{memberId}": { "schema": "Leadership", "description": "Core team equity tracking." },
+    "rounds/{roundId}": { "schema": "Round", "description": "Funding round history." },
+    "investors/{investorId}": { "schema": "Investor", "description": "Investor cap table entries." },
+    "capitalStructure/main": { "schema": "CapitalStructure", "description": "Global cap table settings." },
+    "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." }
   }
 }
