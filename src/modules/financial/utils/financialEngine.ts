@@ -89,9 +89,6 @@ export const calculateRemainingDealYears = (endDate: string | Date | null): stri
   }
 };
 
-// Alias for UI components using old name
-export const calcRemainingTenure = calculateRemainingDealYears;
-
 /**
  * Calculates vesting progress percentage
  */
@@ -398,9 +395,9 @@ export const runFinancialSimulation = (
   // 4. New Runway Projection
   const totalCashAvailable = currentData.cashBalance + sliders.fundingInjection;
   
-  let simRunway: number;
+  let simRunway: string | number;
   if (simMonthlyBurn <= 0) {
-    simRunway = 99.9; // Infinity / Profitable marker
+    simRunway = "∞ (Profitable)";
   } else {
     simRunway = parseFloat((totalCashAvailable / simMonthlyBurn).toFixed(1));
   }
@@ -409,7 +406,7 @@ export const runFinancialSimulation = (
     simRevenue,
     simEBITDA,
     simRunway,
-    burnImpact: simMonthlyBurn > 0 ? simMonthlyBurn : 0,
+    simBurn: simMonthlyBurn > 0 ? simMonthlyBurn : 0,
     totalSimExpenses
   };
 };

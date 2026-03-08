@@ -22,7 +22,8 @@ import {
   ArrowRight,
   RefreshCcw,
   Sparkles,
-  Info
+  Info,
+  Loader2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
@@ -63,8 +64,8 @@ export default function ScenarioSimulatorPage() {
     if (!currentMonth || !expenses || !categories) return null;
     
     const costSplit = groupExpensesByType(expenses, categories);
-    const fixed = costSplit.Fixed + (costSplit["R&D"] || 0);
-    const variable = costSplit.Variable;
+    const fixed = (costSplit.Fixed || 0) + (costSplit["R&D"] || 0);
+    const variable = costSplit.Variable || 0;
     const revenue = currentMonth.netRevenue || 0;
     const burn = (fixed + variable) - revenue;
     const cash = 42000000; // Mock ₹4.2Cr reality base for prototype
@@ -316,10 +317,6 @@ export default function ScenarioSimulatorPage() {
                   ) : simulation && simulation.simRunway > reality.runway ? (
                     <p className="text-sm italic leading-relaxed opacity-90">
                       "Strategic Pivot: These choices extend your lifeline by <strong>{(simulation.simRunway - reality.runway).toFixed(1)} months</strong>. This buys you critical time to reach your next valuation milestone."
-                    </p>
-                  ) : simulation && simulation.simRunway < reality.runway ? (
-                    <p className="text-sm italic leading-relaxed opacity-90 text-rose-100">
-                      "Caution: This growth trajectory increases burn faster than revenue. You are shortening your runway. Ensure your LTV/CAC ratios justify this aggressive scale."
                     </p>
                   ) : (
                     <p className="text-sm italic leading-relaxed opacity-90">
