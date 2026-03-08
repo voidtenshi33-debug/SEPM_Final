@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -6,14 +7,16 @@ import {
   Building2, 
   Wallet, 
   Users, 
-  KanbanSquare, 
+  Rocket, 
   Briefcase, 
   TrendingUp, 
   Megaphone, 
   BarChart3, 
   BrainCircuit, 
   ShieldCheck,
-  ChevronRight
+  Activity,
+  Tags,
+  Zap
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,30 +37,31 @@ import {
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
-  { title: "Financial Center", icon: Wallet, url: "/financial" },
+  { title: "Finance Center", icon: Wallet, url: "/financial" },
+];
+
+const capitalNavItems = [
+  { title: "Cap Table DNA", icon: ShieldCheck, url: "/financial/capital" },
+  { title: "Leadership Team", icon: Users, url: "/financial/capital/leadership" },
+  { title: "Funding Rounds", icon: Rocket, url: "/financial/capital/rounds" },
+  { title: "Investor Ledger", icon: Briefcase, url: "/financial/capital/investors" },
 ];
 
 const operationsNavItems = [
-  { title: "Team Management", icon: Users, url: "/team" },
-  { title: "Projects & Tasks", icon: KanbanSquare, url: "/projects" },
-  { title: "Execution Board", icon: ShieldCheck, url: "/execution" },
-];
-
-const growthNavItems = [
-  { title: "Investor & Deals", icon: Briefcase, url: "/investors" },
-  { title: "Sales & Revenue", icon: TrendingUp, url: "/sales" },
-  { title: "Marketing", icon: Megaphone, url: "/marketing" },
-  { title: "Market Analysis", icon: BarChart3, url: "/market" },
+  { title: "Operational Profit", icon: Activity, url: "/financial/operational" },
+  { title: "Sales Intelligence", icon: TrendingUp, url: "/financial/sales" },
+  { title: "Cost Categories", icon: Tags, url: "/financial/categories" },
 ];
 
 const aiNavItems = [
+  { title: "War Room Insights", icon: Zap, url: "/financial/insights" },
   { title: "AI Growth Engine", icon: BrainCircuit, url: "/ai-insights" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
 
-  const NavList = ({ items }: { items: typeof mainNavItems }) => (
+  const NavList = ({ items }: { items: any[] }) => (
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
@@ -79,7 +83,7 @@ export function AppSidebar() {
           <ShieldCheck className="size-6" />
         </div>
         <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-          <span className="font-headline font-bold text-lg">StartupOS</span>
+          <span className="font-headline font-bold text-lg text-white">StartupOS</span>
           <span className="text-xs text-sidebar-foreground/70">Guardians of Growth</span>
         </div>
       </SidebarHeader>
@@ -90,18 +94,21 @@ export function AppSidebar() {
             <NavList items={mainNavItems} />
           </SidebarGroupContent>
         </SidebarGroup>
+        
+        <SidebarGroup>
+          <SidebarGroupLabel>Capital & Governance</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavList items={capitalNavItems} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Operations</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavList items={operationsNavItems} />
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Growth</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <NavList items={growthNavItems} />
-          </SidebarGroupContent>
-        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Intelligence</SidebarGroupLabel>
           <SidebarGroupContent>
