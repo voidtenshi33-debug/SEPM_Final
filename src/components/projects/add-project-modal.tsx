@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Target, Sparkles, TrendingUp } from 'lucide-react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { generateTaskTemplate } from '@/modules/execution/utils/executionEngine';
@@ -16,10 +16,12 @@ export function AddProjectModal() {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     const formData = new FormData(e.currentTarget);
     
@@ -27,7 +29,7 @@ export function AddProjectModal() {
     const projectName = formData.get('name') as string;
 
     try {
-      const projectRef = await addDoc(collection(db, 'projects'), {
+      const projectRef = await addDoc(collection(db, 'users', user.uid, 'projects'), {
         name: projectName,
         type: projectType,
         budgetAllocated: Number(formData.get('budget')),
@@ -42,7 +44,7 @@ export function AddProjectModal() {
 
       const templateTasks = generateTaskTemplate(projectType);
       const batchPromises = templateTasks.map(task => 
-        addDoc(collection(db, 'tasks'), {
+        addDoc(collection(db, 'users', user.uid, 'tasks'), {
           ...task,
           projectId: projectRef.id,
           deadline: formData.get('endDate') as string,

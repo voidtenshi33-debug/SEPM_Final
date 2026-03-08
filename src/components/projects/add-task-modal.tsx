@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, ListTodo, User, Zap } from 'lucide-react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Switch } from '@/components/ui/switch';
@@ -21,18 +21,23 @@ export function AddTaskModal({ projects }: AddTaskModalProps) {
   const [loading, setLoading] = React.useState(false);
   const [bonus, setBonus] = React.useState(false);
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
-  const leadershipQuery = useMemoFirebase(() => query(collection(db, 'leadership'), orderBy('name', 'asc')), [db]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'leadership'), orderBy('name', 'asc'));
+  }, [db, user]);
   const { data: leadership } = useCollection(leadershipQuery);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     const formData = new FormData(e.currentTarget);
 
     try {
-      await addDoc(collection(db, 'tasks'), {
+      await addDoc(collection(db, 'users', user.uid, 'tasks'), {
         title: formData.get('title') as string,
         projectId: formData.get('projectId') as string,
         status: "Todo",
@@ -119,7 +124,7 @@ export function AddTaskModal({ projects }: AddTaskModalProps) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="hours">Est. Hours</Label>
+                <Label htmlFor="hours">Hours</Label>
                 <Input id="hours" name="hours" type="number" defaultValue={4} />
               </div>
             </div>

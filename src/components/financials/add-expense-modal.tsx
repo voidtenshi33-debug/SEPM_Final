@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from "react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { 
   Dialog, 
@@ -28,13 +27,18 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
-  const projectsQuery = useMemoFirebase(() => collection(firestore, "projects"), [firestore]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "users", user.uid, "projects");
+  }, [firestore, user]);
   const { data: projects } = useCollection(projectsQuery);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
@@ -48,7 +52,7 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
 
     try {
       // 1. Log Expense
-      await addDoc(collection(firestore, "expenses"), {
+      await addDoc(collection(firestore, "users", user.uid, "expenses"), {
         amount,
         categoryId,
         projectId: projectId || null,
@@ -60,7 +64,7 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
       
       // 2. If linked to a project, update project's budgetUsed
       if (projectId) {
-        const projectRef = doc(firestore, "projects", projectId);
+        const projectRef = doc(firestore, "users", user.uid, "projects", projectId);
         await updateDoc(projectRef, {
           budgetUsed: increment(amount)
         });

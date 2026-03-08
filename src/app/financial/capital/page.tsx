@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { validateEquity, formatINR } from "@/modules/financial/utils/financialEngine";
 import { 
@@ -23,23 +23,39 @@ const COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B'];
 export default function CapitalPage() {
   const [mounted, setMounted] = useState(false);
   const db = useFirestore();
+  const { user } = useUser();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Firestore Subscriptions
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('startDate', 'desc')), [db]);
-  const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
-  const leadershipQuery = useMemoFirebase(() => collection(db, 'leadership'), [db]);
-  const capRef = useMemoFirebase(() => doc(db, 'capitalStructure', 'main'), [db]);
+  // Firestore Subscriptions (Isolated)
+  const roundsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'rounds'), orderBy('roundDate', 'desc'));
+  }, [db, user]);
+
+  const investorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'investors');
+  }, [db, user]);
+
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'leadership');
+  }, [db, user]);
+
+  const capRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid, 'capitalStructure', 'main');
+  }, [db, user]);
 
   const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
   const { data: investors, isLoading: loadingInv } = useCollection(investorsQuery);
   const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
   const { data: capTable, isLoading: loadingCap } = useDoc(capRef);
 
-  if (loadingRounds || loadingInv || loadingLead || loadingCap) {
+  if (loadingRounds || loadingInv || loadingLead || loadingCap || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -69,7 +85,6 @@ export default function CapitalPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* 1. Cap Table DNA Visualization */}
         <Card className="border-none shadow-xl lg:col-span-1 h-fit">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div className="space-y-1">
@@ -120,7 +135,6 @@ export default function CapitalPage() {
           </CardContent>
         </Card>
 
-        {/* 2. Funding Rounds & Governance Ledger */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-xl overflow-hidden">
             <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/30">
@@ -138,8 +152,7 @@ export default function CapitalPage() {
                   {rounds?.map((round) => {
                     const roundInvestors = investors?.filter(i => i.roundId === round.id) || [];
                     const actualRaised = roundInvestors.reduce((sum, i) => sum + (i.investmentAmount || 0), 0);
-                    // Handle targetRaise from doc structure (if missing fallback to round.amountRaised)
-                    const target = round.targetRaise || round.amountRaised || 1;
+                    const target = round.amountRaised || 1;
                     const progress = Math.min((actualRaised / target) * 100, 100);
                     const isOverSubscribed = actualRaised > target;
 
@@ -147,7 +160,7 @@ export default function CapitalPage() {
                       <div key={round.id} className="p-5 rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md transition-all group">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="font-bold text-slate-900 text-xl font-headline">{round.roundName || round.name}</p>
+                            <p className="font-bold text-slate-900 text-xl font-headline">{round.name}</p>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{round.roundType || 'Equity'} Round</p>
                           </div>
                           {isOverSubscribed ? (
@@ -225,7 +238,7 @@ export default function CapitalPage() {
                            </td>
                            <td className="px-6 py-4">
                              <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100 text-[9px] font-bold">
-                               {round?.roundName || round?.name || 'Direct Allotment'}
+                               {round?.name || 'Direct Allotment'}
                              </Badge>
                            </td>
                            <td className="px-6 py-4 text-right font-bold text-slate-700">

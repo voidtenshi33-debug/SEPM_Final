@@ -2,9 +2,8 @@
 
 import React, { useState } from "react";
 import { useParams } from "next/navigation";
-import { useFirestore, useDoc, useCollection, useUser } from "@/firebase";
+import { useFirestore, useDoc, useCollection, useUser, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where, addDoc, updateDoc } from "firebase/firestore";
-import { useMemoFirebase } from "@/firebase/provider";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,20 +46,33 @@ export default function ProjectDetailsPage() {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
 
-  const projectRef = useMemoFirebase(() => doc(db, 'projects', projectId), [db, projectId]);
+  const projectRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid, 'projects', projectId);
+  }, [db, user, projectId]);
   const { data: project, isLoading: loadingProject } = useDoc(projectRef);
 
-  const tasksQuery = useMemoFirebase(() => query(collection(db, 'tasks'), where('projectId', '==', projectId)), [db, projectId]);
+  const tasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'tasks'), where('projectId', '==', projectId));
+  }, [db, user, projectId]);
   const { data: tasks } = useCollection(tasksQuery);
 
-  const leadershipQuery = useMemoFirebase(() => collection(db, 'leadership'), [db]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'leadership');
+  }, [db, user]);
   const { data: team } = useCollection(leadershipQuery);
 
-  const expensesQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'expenses');
+  }, [db, user]);
   const { data: allExpenses } = useCollection(expensesQuery);
 
   const handleAssignTask = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     const formData = new FormData(e.currentTarget);
     
     const taskData = {
@@ -77,15 +89,15 @@ export default function ProjectDetailsPage() {
       createdAt: new Date().toISOString()
     };
 
-    addDoc(collection(db, 'tasks'), taskData);
+    addDoc(collection(db, 'users', user.uid, 'tasks'), taskData);
     setAssignModalOpen(false);
   };
 
   const handleSubmitUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newUpdate || !selectedTask) return;
+    if (!newUpdate || !selectedTask || !user) return;
 
-    const updateRef = collection(db, 'tasks', selectedTask, 'weeklyUpdates');
+    const updateRef = collection(db, 'users', user.uid, 'tasks', selectedTask, 'weeklyUpdates');
     addDoc(updateRef, {
       content: newUpdate,
       authorId: user?.email || 'Anonymous',
@@ -93,14 +105,14 @@ export default function ProjectDetailsPage() {
       taskId: selectedTask
     });
 
-    const taskRef = doc(db, 'tasks', selectedTask);
+    const taskRef = doc(db, 'users', user.uid, 'tasks', selectedTask);
     updateDoc(taskRef, { lastUpdateAt: new Date().toISOString() });
 
     setNewUpdate("");
     setSelectedTask(null);
   };
 
-  if (loadingProject) return (
+  if (loadingProject || !user) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
     </div>
@@ -295,7 +307,7 @@ export default function ProjectDetailsPage() {
                   </div>
                   <div className="space-y-3">
                     {todoTasks.map(task => (
-                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'In Progress' })} />
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), { status: 'In Progress' })} />
                     ))}
                   </div>
                 </div>
@@ -308,7 +320,7 @@ export default function ProjectDetailsPage() {
                   </div>
                   <div className="space-y-3">
                     {inProgressTasks.map(task => (
-                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'Completed', completedAt: new Date().toISOString(), bonusEligible: new Date() <= new Date(task.deadline) })} isProgress />
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), { status: 'Completed', completedAt: new Date().toISOString(), bonusEligible: new Date() <= new Date(task.deadline) })} isProgress />
                     ))}
                   </div>
                 </div>
@@ -321,7 +333,7 @@ export default function ProjectDetailsPage() {
                   </div>
                   <div className="space-y-3">
                     {completedTasks.map(task => (
-                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'Todo' })} isCompleted />
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'users', user.uid, 'tasks', task.id), { status: 'Todo' })} isCompleted />
                     ))}
                   </div>
                 </div>

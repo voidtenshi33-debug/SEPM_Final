@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { formatINR, calculateRunway, calcEBITDA } from "@/modules/financial/utils/financialEngine";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { calculateProjectHealth } from "@/modules/execution/utils/executionEngine";
 import { 
@@ -38,12 +38,25 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
+  const { user } = useUser();
   const { financials, latestMonth, leadership, isLoading: loadingFin } = useFinancials();
   
   const db = useFirestore();
-  const projectsQuery = useMemoFirebase(() => collection(db, 'projects'), [db]);
-  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
-  const expensesQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
+  
+  const projectsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'projects');
+  }, [db, user]);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'tasks');
+  }, [db, user]);
+
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'expenses');
+  }, [db, user]);
 
   const { data: projects, isLoading: loadingProjects } = useCollection(projectsQuery);
   const { data: tasks, isLoading: loadingTasks } = useCollection(tasksQuery);
@@ -53,7 +66,7 @@ export default function DashboardPage() {
     setMounted(true);
   }, []);
 
-  if (loadingFin || loadingProjects || loadingTasks) {
+  if (loadingFin || loadingProjects || loadingTasks || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -62,12 +75,10 @@ export default function DashboardPage() {
     );
   }
 
-  // Real Metrics Calculation
   const currentMRR = latestMonth?.netRevenue || 0;
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
   
-  // Real Runway (Fallback to 0 if no burn data)
-  const runway = currentBurn > 0 ? calculateRunway(1000000, currentBurn) : 99; // Mock initial cash ₹10L for prototype context
+  const runway = currentBurn > 0 ? calculateRunway(0, currentBurn) : 99; 
   const teamSize = leadership?.length || 0;
   
   const activeProjects = projects?.filter(p => p.status === 'Active') || [];

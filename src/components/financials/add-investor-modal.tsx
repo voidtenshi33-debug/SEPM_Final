@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { 
   Dialog, 
@@ -27,10 +27,12 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
@@ -39,7 +41,7 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
 
     try {
       // 1. Log Investor
-      await addDoc(collection(firestore, "investors"), {
+      await addDoc(collection(firestore, "users", user.uid, "investors"), {
         roundId,
         name: formData.get("name") as string,
         investmentAmount: amount,
@@ -52,7 +54,7 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
       });
       
       // 2. Atomic update to parent Round
-      const roundRef = doc(firestore, "rounds", roundId);
+      const roundRef = doc(firestore, "users", user.uid, "rounds", roundId);
       await updateDoc(roundRef, {
         amountRaised: increment(amount),
       });

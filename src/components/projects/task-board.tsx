@@ -1,13 +1,12 @@
-
 'use client';
 
 import React from 'react';
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { doc, updateDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Clock, User, Plus, MessageSquare, ArrowRight } from 'lucide-react';
+import { CheckCircle2, Clock, User, Plus, MessageSquare, ArrowRight, Layout } from 'lucide-react';
 import { AddTaskModal } from './add-task-modal';
 import { cn } from '@/lib/utils';
 
@@ -24,15 +23,17 @@ const COLUMNS = [
 
 export function TaskBoard({ projects, tasks }: TaskBoardProps) {
   const db = useFirestore();
+  const { user } = useUser();
 
   const handleStatusChange = async (taskId: string, currentStatus: string) => {
+    if (!user) return;
     const statusFlow: Record<string, string> = {
       'Todo': 'In Progress',
       'In Progress': 'Completed',
       'Completed': 'Todo'
     };
     const nextStatus = statusFlow[currentStatus];
-    const taskRef = doc(db, 'tasks', taskId);
+    const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     await updateDoc(taskRef, { status: nextStatus });
   };
 
@@ -90,7 +91,7 @@ export function TaskBoard({ projects, tasks }: TaskBoardProps) {
                           </div>
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
-                            <span className="text-[10px] font-bold">Founder</span>
+                            <span className="text-[10px] font-bold">{task.assignedTo}</span>
                           </div>
                         </div>
                         <Button 

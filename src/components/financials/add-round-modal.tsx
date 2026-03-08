@@ -1,8 +1,7 @@
-
 'use client';
 
 import * as React from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { 
   Dialog, 
@@ -24,10 +23,12 @@ export function AddRoundModal() {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
@@ -39,11 +40,11 @@ export function AddRoundModal() {
     const roundDate = formData.get("roundDate") as string;
 
     try {
-      await addDoc(collection(firestore, "rounds"), {
+      await addDoc(collection(firestore, "users", user.uid, "rounds"), {
         name: roundName,
         roundType,
         preMoneyValuation,
-        amountRaised: 0, // Securing consistency with Ledger increment
+        amountRaised: 0, 
         equityDilutedPct,
         roundDate: new Date(roundDate).toISOString(),
         status: "Open",
