@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -10,7 +9,6 @@ import {
   Rocket, 
   Briefcase, 
   TrendingUp, 
-  BarChart3, 
   BrainCircuit, 
   ShieldCheck,
   Activity,
@@ -21,7 +19,7 @@ import {
   LogOut
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Button } from "@/components/ui/button";
@@ -73,6 +71,7 @@ const aiNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const auth = useAuth();
   const { user } = useUser();
 
@@ -88,8 +87,9 @@ export function AppSidebar() {
 
   const userName = user?.displayName || "Founder";
 
-  const handleLogout = () => {
-    signOut(auth);
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push("/welcome");
   };
 
   const NavList = ({ items }: { items: any[] }) => (
