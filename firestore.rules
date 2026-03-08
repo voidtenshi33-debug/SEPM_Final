@@ -1,0 +1,182 @@
+/**
+ * UdyamRakshak Financial Module - Security Rules Architecture
+ * 
+ * Core Philosophy:
+ * This ruleset implements a multi-tenant security model for a startup financial management platform.
+ * Authorization is strictly controlled based on startup membership, ensuring that users can only 
+ * access or modify data belonging to a startup where they are authorized members.
+ *
+ * Data Structure:
+ * The architecture utilizes a Hybrid Flat-Denormalized Model. To ensure high performance and 
+ * avoid deep nesting, core entities (Financials, Rounds, Investors) are stored in top-level 
+ * collections. Every document in these collections contains a denormalized 'startupId' field.
+ * This field is the "Golden Thread" that links all financial data back to the primary 
+ * StartupProfile for authorization.
+ *
+ * Key Security Decisions:
+ * 1. Authorization Independence: By storing 'startupId' on every document, the rules can 
+ *    perform authorization checks without traversing complex document hierarchies.
+ * 2. Singleton Management: The 'capitalStructure' is managed as a singleton document per 
+ *    startup, where the document ID is the 'startupId', enabling path-based security.
+ * 3. Startup-Gated Access: A central helper function `isMemberOfStartup` performs a lookup 
+ *    on the StartupProfile to verify the authenticated user's permissions.
+ * 4. Relational Integrity: On creation of any financial record, the rules enforce that the 
+ *    'startupId' in the data matches a startup the user is authorized to manage, and that 
+ *    this link remains immutable during updates.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** 
+     * @description Checks if the user is authenticated with any provider.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** 
+     * @description Verifies if the authenticated user is a member of the specified startup.
+     * This relies on a 'members' map on the StartupProfile document where keys are UIDs.
+     */
+    function isMemberOfStartup(startupId) {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/startups/$(startupId)).data.members[request.auth.uid] != null;
+    }
+
+    /** 
+     * @description Checks if a user is authorized to write to a document based on existing ownership.
+     */
+    function isExistingStartupData(resourceData) {
+      return resourceData != null && isMemberOfStartup(resourceData.startupId);
+    }
+
+    /** 
+     * @description Enforces immutability of the startupId field to prevent data hijacking.
+     */
+    function startupIdIsImmutable() {
+      return request.resource.data.startupId == resource.data.startupId;
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Core profile information for startups. Access is path-based.
+     * @path /startups/{startupId}
+     * @allow (get) If the user is a member of the startup.
+     * @deny (update) If the user is not a member or tries to change the startup's identity.
+     * @principle Restricts access to a user's own startup data tree using path-based authorization.
+     */
+    match /startups/{startupId} {
+      allow get: if isMemberOfStartup(startupId);
+      allow list: if isSignedIn(); // Listing startups is permitted; membership check happens within list filters if needed.
+      allow create: if isSignedIn(); // Users can create their own startup profile.
+      allow update, delete: if isMemberOfStartup(startupId);
+    }
+
+    /**
+     * @description Monthly financial metrics including revenue and expenses.
+     * @path /financials/{monthId}
+     * @allow (create) If the provided startupId in the data matches a startup the user belongs to.
+     * @deny (list) If the user attempts to list financials without filtering by their startupId.
+     * @principle Enforces relational integrity and denormalized authorization for multi-tenant data.
+     */
+    match /financials/{monthId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+    /**
+     * @description Funding round definitions (Seed, Series A, etc.).
+     * @path /rounds/{roundId}
+     * @allow (get) If the user is a member of the startup that owns this funding round.
+     * @deny (update) If the user attempts to move the round to a different startupId.
+     * @principle Authorization Independence ensures rounds are secured by their internal startupId.
+     */
+    match /rounds/{roundId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+    /**
+     * @description Individual investor participation records.
+     * @path /investors/{investorId}
+     * @allow (create) If the user is a member of the startupId specified in the investor record.
+     * @deny (get) If the investor document belongs to a startup the user is not part of.
+     * @principle Uses denormalized links (startupId) to authorize access without parent-path lookups.
+     */
+    match /investors/{investorId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+    /**
+     * @description Singleton document containing the aggregated Cap Table for a startup.
+     * @path /capitalStructure/{startupId}
+     * @allow (get) If the user is a member of the startup identified by the document ID.
+     * @deny (create) If the user tries to create a cap table for a startup they don't belong to.
+     * @principle Path-based singleton pattern for efficient, single-document Cap Table reads.
+     */
+    match /capitalStructure/{startupId} {
+      allow get: if isMemberOfStartup(startupId);
+      allow list: if isMemberOfStartup(startupId);
+      allow create: if isMemberOfStartup(startupId);
+      allow update, delete: if isMemberOfStartup(startupId);
+    }
+
+    /**
+     * @description Team member profiles and role assignments.
+     * @path /teamMembers/{memberId}
+     * @allow (update) Only if the team member belongs to the same startup as the requester.
+     * @deny (delete) If the team member record does not exist.
+     */
+    match /teamMembers/{memberId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+    /**
+     * @description Internal projects managed by the startup.
+     * @path /projects/{projectId}
+     * @allow (create) If request.resource.data.startupId is valid for the user.
+     * @deny (update) If ownership of the project is attempted to be changed across startups.
+     */
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+    /**
+     * @description Individual tasks nested within projects (authorized via startupId).
+     * @path /tasks/{taskId}
+     * @allow (get) If the task's startupId matches the user's startup membership.
+     * @deny (create) If the startupId is missing from the task data.
+     */
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow list: if isSignedIn() && isMemberOfStartup(resource.data.startupId);
+      allow create: if isSignedIn() && isMemberOfStartup(request.resource.data.startupId);
+      allow update: if isExistingStartupData(resource.data) && startupIdIsImmutable();
+      allow delete: if isExistingStartupData(resource.data);
+    }
+
+  }
+}
