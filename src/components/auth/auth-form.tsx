@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -22,6 +23,16 @@ export function AuthForm() {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
+    if (password.length < 6) {
+      toast({
+        title: "Weak Access Key",
+        description: "Password should be at least 6 characters.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
       initiateEmailSignIn(auth, email, password);
     } catch (err) {
@@ -38,6 +49,16 @@ export function AuthForm() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+
+    if (password.length < 6) {
+      toast({
+        title: "Weak Access Key",
+        description: "Password should be at least 6 characters.",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
 
     try {
       initiateEmailSignUp(auth, email, password);
