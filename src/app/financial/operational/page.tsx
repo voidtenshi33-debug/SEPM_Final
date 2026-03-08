@@ -1,16 +1,17 @@
+
 'use client';
 
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit, where } from "firebase/firestore";
+import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { 
   calcEBITDA, 
   calcEBITDAMargin, 
   calculateRunway, 
   formatINR,
-  getMonthlyDistribution
+  getMonthlyDistribution,
+  calculateBudgetVariance
 } from "@/modules/financial/utils/financialEngine";
 import { 
   LineChart, 
@@ -34,57 +35,70 @@ import {
   PieChart as PieIcon,
   LayoutList,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Target,
+  ArrowUpRight,
+  ShieldAlert
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddExpenseModal } from "@/components/financials/add-expense-modal";
+import { SetBudgetModal } from "@/components/financials/set-budget-modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 const CHART_COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
 export default function OperationalPage() {
   const [mounted, setMounted] = useState(false);
-  const db = useFirestore();
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7));
   
-  // Fetch snapshots
-  const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('id', 'desc'), limit(12)), [db]);
-  const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
-
-  // Fetch categories
-  const catQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
-  const { data: categories } = useCollection(catQuery);
+  const { financials, categories, expenses, budget, isLoading } = useFinancials(selectedMonth);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const currentMonth = financials?.[0];
-  const prevMonth = financials?.[1];
-
+  const currentMonth = financials?.find(f => f.id === selectedMonth) || financials?.[0];
+  
   const netRev = currentMonth?.netRevenue || 0;
   const opEx = currentMonth?.operatingExpenses || 0;
   const ebitda = calcEBITDA(netRev, opEx);
   const margin = calcEBITDAMargin(ebitda, netRev);
-  
-  const prevEbitda = prevMonth ? calcEBITDA(prevMonth.netRevenue, prevMonth.operatingExpenses) : 0;
+  const runway = calculateRunway(42000000, opEx); // Mock cash
 
-  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash
-
-  // Fetch expenses for current month
-  const currentMonthId = currentMonth?.id || '';
-  const expensesQuery = useMemoFirebase(() => 
-    currentMonthId ? query(collection(db, 'expenses'), where('monthId', '==', currentMonthId)) : null, 
-    [db, currentMonthId]
-  );
-  const { data: expenses } = useCollection(expensesQuery);
-
+  // Distribution Logic
+  const monthExpenses = expenses?.filter(e => e.month === selectedMonth) || [];
   const distributionData = React.useMemo(() => {
-    return getMonthlyDistribution(expenses, categories);
-  }, [expenses, categories]);
+    return getMonthlyDistribution(monthExpenses, categories);
+  }, [monthExpenses, categories]);
 
-  const fixedVsVariable = React.useMemo(() => {
-    const fixed = distributionData.filter(d => d.type === 'Fixed').reduce((sum, d) => sum + d.percentage, 0);
-    return { fixed };
-  }, [distributionData]);
+  // Variance Logic
+  const varianceReport = React.useMemo(() => {
+    if (!budget?.categoryBudgets) return [];
+    
+    return categories.map(cat => {
+      const budgetItem = budget.categoryBudgets.find((b: any) => b.categoryId === cat.id);
+      const actualItem = distributionData.find(d => d.id === cat.id);
+      const budgetAmount = budgetItem?.budgetAmount || 0;
+      const actualAmount = actualItem?.amount || 0;
+      
+      const { variance, variancePct, status } = calculateBudgetVariance(actualAmount, budgetAmount);
+      
+      return {
+        ...cat,
+        budgetAmount,
+        actualAmount,
+        variance,
+        variancePct,
+        status
+      };
+    }).filter(v => v.budgetAmount > 0 || v.actualAmount > 0);
+  }, [budget, categories, distributionData]);
+
+  const totalBudget = varianceReport.reduce((sum, v) => sum + v.budgetAmount, 0);
+  const totalActual = varianceReport.reduce((sum, v) => sum + v.actualAmount, 0);
+  const totalProgress = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
 
   const chartData = financials?.map(f => ({
     month: f.id,
@@ -92,7 +106,7 @@ export default function OperationalPage() {
     expenses: f.operatingExpenses,
   })).reverse() || [];
 
-  if (loadingFin) return (
+  if (isLoading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="h-8 w-8 animate-spin text-accent" />
     </div>
@@ -100,6 +114,31 @@ export default function OperationalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
+      {/* Month Selector */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+        <div className="flex items-center gap-3">
+          <Target className="h-5 w-5 text-accent" />
+          <h2 className="text-xl font-bold font-headline">Operational Guard</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger className="w-[180px] h-9 font-bold">
+              <SelectValue placeholder="Select Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {financials?.map(f => (
+                <SelectItem key={f.id} value={f.id}>{f.id}</SelectItem>
+              ))}
+              {(!financials?.some(f => f.id === selectedMonth)) && (
+                <SelectItem value={selectedMonth}>{selectedMonth}</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+          <SetBudgetModal categories={categories} monthId={selectedMonth} existingBudget={budget} />
+          <AddExpenseModal categories={categories} />
+        </div>
+      </div>
+
       {/* Top Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-none shadow-xl bg-[#0F172A] text-white">
@@ -136,27 +175,110 @@ export default function OperationalPage() {
 
         <Card className="border-none shadow-xl">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Efficiency</p>
-              {margin < 15 && margin > 0 && (
-                <Badge variant="destructive" className="text-[8px] h-4 uppercase">Low Margin</Badge>
-              )}
-            </div>
-            <p className="text-3xl font-bold font-headline">{margin.toFixed(1)}%</p>
-            <div className="flex items-center text-[10px] text-accent mt-2 font-bold uppercase tracking-widest">
-               <Activity className="h-3 w-3 mr-1" /> Target: 25.0%
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Budget Efficiency</p>
+            <p className={cn("text-3xl font-bold font-headline", totalProgress > 100 ? 'text-rose-600' : 'text-emerald-600')}>
+              {totalProgress.toFixed(1)}%
+            </p>
+            <div className="flex items-center text-[10px] text-slate-400 mt-2 font-bold uppercase">
+               {totalActual > totalBudget ? <AlertCircle className="h-3 w-3 mr-1 text-rose-500" /> : <CheckCircle2 className="h-3 w-3 mr-1 text-emerald-500" />}
+               Plan vs. Execution
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none shadow-xl">
+      {/* Budget vs Actual Intelligence Section */}
+      <div className="space-y-6 pt-4">
+        <div className="flex items-center gap-2 px-1">
+          <ShieldAlert className="h-5 w-5 text-accent" />
+          <h3 className="text-lg font-bold font-headline">Budget vs. Actual Variance</h3>
+        </div>
+        
+        <Card className="border-none shadow-xl overflow-hidden bg-white">
+          <CardContent className="p-0">
+            {varianceReport.length > 0 ? (
+              <div className="relative overflow-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="text-[10px] uppercase bg-slate-50 text-slate-500 font-bold tracking-widest border-b">
+                    <tr>
+                      <th className="px-6 py-4">Expense Category</th>
+                      <th className="px-6 py-4 text-right">Budget (₹)</th>
+                      <th className="px-6 py-4 text-right">Actual (₹)</th>
+                      <th className="px-6 py-4 text-right">Variance (₹)</th>
+                      <th className="px-6 py-4 text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {varianceReport.map((row, i) => (
+                      <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-4">
+                          <div className="space-y-1">
+                            <p className="font-bold text-slate-900">{row.name}</p>
+                            <Progress value={Math.min((row.actualAmount / (row.budgetAmount || 1)) * 100, 100)} className={cn("h-1 w-24", row.status === 'OVER' ? 'bg-rose-100' : 'bg-slate-100')} />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right font-medium text-slate-500">{formatINR(row.budgetAmount)}</td>
+                        <td className="px-6 py-4 text-right font-bold text-slate-900">{formatINR(row.actualAmount)}</td>
+                        <td className={cn("px-6 py-4 text-right font-bold", row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
+                          {row.status === 'OVER' ? '+' : '-'}{formatINR(Math.abs(row.variance))}
+                          <span className="text-[9px] ml-1 opacity-70">({row.variancePct}%)</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {row.status === 'OVER' ? (
+                            <Badge className="bg-rose-50 text-rose-700 border-rose-100 uppercase text-[8px] font-bold">Over Budget</Badge>
+                          ) : row.status === 'UNDER' ? (
+                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 uppercase text-[8px] font-bold">Under Budget</Badge>
+                          ) : (
+                            <Badge variant="outline" className="uppercase text-[8px] font-bold">On Track</Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot className="bg-slate-50 font-bold border-t">
+                    <tr>
+                      <td className="px-6 py-4">TOTAL OPERATIONAL BURN</td>
+                      <td className="px-6 py-4 text-right">{formatINR(totalBudget)}</td>
+                      <td className="px-6 py-4 text-right">{formatINR(totalActual)}</td>
+                      <td className={cn("px-6 py-4 text-right", totalActual > totalBudget ? 'text-rose-600' : 'text-emerald-600')}>
+                        {totalActual > totalBudget ? '+' : '-'}{formatINR(Math.abs(totalActual - totalBudget))}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <Badge variant={totalActual > totalBudget ? 'destructive' : 'default'} className="uppercase text-[8px] font-bold">
+                          {totalActual > totalBudget ? 'Deficit' : 'Surplus'}
+                        </Badge>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-20 text-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center">
+                  <ShieldAlert className="h-8 w-8 text-slate-200" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-slate-900">No Budget Plan Recorded</h4>
+                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+                    Establish categorical targets for {selectedMonth} to activate situational variance intelligence.
+                  </p>
+                  <div className="mt-6">
+                    <SetBudgetModal categories={categories} monthId={selectedMonth} />
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="border-none shadow-xl">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Burn vs. Revenue Intelligence</CardTitle>
+            <CardTitle className="text-lg font-bold">Burn vs. Revenue Velocity</CardTitle>
             <CardDescription>Historical trend analysis (₹)</CardDescription>
           </CardHeader>
-          <CardContent className="h-[400px] p-6 pt-0">
+          <CardContent className="h-[350px] p-6 pt-0">
             {mounted ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
@@ -175,47 +297,13 @@ export default function OperationalPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl bg-accent/5 border border-accent/10">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold text-accent flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              Operational Guard
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-             <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Efficiency Analysis</h4>
-                <p className="text-sm text-slate-600 leading-relaxed italic">
-                  {margin < 15 ? "EBITDA Margin is below benchmark. Focus on optimizing overhead costs." : "Healthy unit economics detected. Model is trending towards scale."}
-                </p>
-             </div>
-             
-             <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cost Rigidity</h4>
-                <div className="space-y-2">
-                   <div className="flex justify-between text-sm">
-                      <span className="text-slate-500">Structural Rigidity</span>
-                      <span className="font-bold">{fixedVsVariable.fixed.toFixed(1)}%</span>
-                   </div>
-                   <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${fixedVsVariable.fixed}%` }} />
-                   </div>
-                   <p className="text-[10px] text-slate-400 italic">High rigidity reduces pivot elasticity.</p>
-                </div>
-             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Expense Distribution Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="border-none shadow-xl">
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <PieIcon className="h-5 w-5 text-accent" />
-              Expense Distribution (%)
+              Categorical Burn (%)
             </CardTitle>
-            <CardDescription>Current month allocation by category</CardDescription>
+            <CardDescription>Current month allocation</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
             {mounted && distributionData.length > 0 ? (
@@ -243,55 +331,9 @@ export default function OperationalPage() {
             ) : (
               <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-lg text-slate-400 p-8 text-center">
                 <PieIcon className="h-8 w-8 mb-2 opacity-20" />
-                <p className="text-sm font-medium mb-4">No Data Recorded for {currentMonthId || 'Current Month'}</p>
-                <AddExpenseModal categories={categories || []} />
+                <p className="text-sm font-medium">No Data Recorded for {selectedMonth}</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <LayoutList className="h-5 w-5 text-accent" />
-              Detailed Breakdown
-            </CardTitle>
-            <CardDescription>Exact numbers vs % of total spend</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Category</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Type</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Amount (₹)</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">% Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {distributionData.map((row, i) => (
-                  <TableRow key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-bold text-slate-700">{row.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[9px] uppercase font-bold tracking-tighter ${
-                        row.type === 'Fixed' ? 'text-blue-600 bg-blue-50 border-blue-100' :
-                        row.type === 'Variable' ? 'text-amber-600 bg-amber-50 border-amber-100' :
-                        'text-emerald-600 bg-emerald-50 border-emerald-100'
-                      }`}>
-                        {row.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{formatINR(row.amount)}</TableCell>
-                    <TableCell className="text-right font-bold text-accent">{row.percentage}%</TableCell>
-                  </TableRow>
-                ))}
-                {distributionData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-slate-400 italic">No expense data for this month.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>

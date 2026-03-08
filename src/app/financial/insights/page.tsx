@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -25,14 +26,15 @@ import {
   calcEBITDAMargin, 
   calculateRunway, 
   calculateHealthScore, 
-  generateInsights
+  generateInsights,
+  calculateBudgetVariance
 } from "@/modules/financial/utils/financialEngine";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function FinancialInsightsPage() {
-  const { financials, latestMonth, prevMonth, capTable, leadership, isLoading } = useFinancials();
+  const { financials, latestMonth, capTable, leadership, budget, expenses, categories, isLoading } = useFinancials();
 
   if (isLoading) {
     return (
@@ -40,6 +42,29 @@ export default function FinancialInsightsPage() {
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
       </div>
     );
+  }
+
+  // Calculate Variance for Insights
+  let totalVariancePct = 0;
+  let marketingVariancePct = 0;
+
+  if (budget?.categoryBudgets && latestMonth) {
+    const monthExpenses = expenses.filter(e => e.month === latestMonth.id);
+    const totalBud = budget.categoryBudgets.reduce((s: number, b: any) => s + b.budgetAmount, 0);
+    const totalAct = monthExpenses.reduce((s: number, e: any) => s + e.amount, 0);
+    
+    if (totalBud > 0) {
+      totalVariancePct = ((totalAct - totalBud) / totalBud) * 100;
+    }
+
+    const marketingCat = categories.find(c => c.name.toLowerCase().includes('marketing'));
+    if (marketingCat) {
+      const markBud = budget.categoryBudgets.find((b: any) => b.categoryId === marketingCat.id)?.budgetAmount || 0;
+      const markAct = monthExpenses.filter(e => e.categoryId === marketingCat.id).reduce((s: number, e: any) => s + e.amount, 0);
+      if (markBud > 0) {
+        marketingVariancePct = ((markAct - markBud) / markBud) * 100;
+      }
+    }
   }
 
   // Prep data for engine
@@ -53,7 +78,9 @@ export default function FinancialInsightsPage() {
     burnRate: burn,
     netRevenue: latestMonth?.netRevenue || 0,
     founderEquity: capTable?.founderEquityPct || 0,
-    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0
+    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0,
+    totalVariancePct,
+    marketingVariancePct
   };
 
   const healthScore = calculateHealthScore(metrics);
@@ -61,18 +88,14 @@ export default function FinancialInsightsPage() {
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
-    
-    // Header
     doc.setFontSize(22);
     doc.setTextColor(15, 23, 42); 
     doc.text("UdyamRakshak: Executive Financial Brief", 14, 22);
-    
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
     doc.text(`Startup Health Score: ${healthScore}/100`, 14, 36);
 
-    // Section 1: Vital Signs
     doc.setFontSize(14);
     doc.setTextColor(15, 23, 42);
     doc.text("1. Vital Signs (INR)", 14, 48);
@@ -85,12 +108,12 @@ export default function FinancialInsightsPage() {
         ['Monthly Burn', formatINR(metrics.burnRate)],
         ['EBITDA Margin', `${metrics.ebitdaMargin.toFixed(1)}%`],
         ['Cash Runway', `${metrics.runway.toFixed(1)} Months`],
+        ['Budget Variance', `${totalVariancePct.toFixed(1)}%`],
       ],
       theme: 'striped',
       headStyles: { fillColor: [59, 130, 246] }
     });
 
-    // Section 2: Ownership Snapshot
     const finalY = (doc as any).lastAutoTable.finalY || 50;
     doc.text("2. Ownership Snapshot", 14, finalY + 15);
     
@@ -106,16 +129,13 @@ export default function FinancialInsightsPage() {
       theme: 'grid'
     });
 
-    // Section 3: AI Strategic Advisory
     const secondY = (doc as any).lastAutoTable.finalY || 120;
     doc.text("3. AI Strategic Advisory", 14, secondY + 15);
-    
     doc.setFontSize(10);
     let currentY = secondY + 25;
     insights.forEach((insight, i) => {
-      const level = insight.level;
       doc.setFont("helvetica", "bold");
-      doc.text(`${i + 1}. [${level}]`, 14, currentY);
+      doc.text(`${i + 1}. [${insight.level}]`, 14, currentY);
       doc.setFont("helvetica", "normal");
       const splitText = doc.splitTextToSize(insight.msg, 170);
       doc.text(splitText, 45, currentY);
@@ -158,22 +178,9 @@ export default function FinancialInsightsPage() {
           </div>
           <div className="relative h-48 w-48 flex items-center justify-center mb-6">
             <svg className="h-full w-full transform -rotate-90">
+              <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-200" />
               <circle
-                cx="96"
-                cy="96"
-                r="88"
-                stroke="currentColor"
-                strokeWidth="12"
-                fill="transparent"
-                className="text-slate-200"
-              />
-              <circle
-                cx="96"
-                cy="96"
-                r="88"
-                stroke="currentColor"
-                strokeWidth="12"
-                fill="transparent"
+                cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="12" fill="transparent"
                 strokeDasharray={552.92}
                 strokeDashoffset={552.92 * (1 - healthScore / 100)}
                 className={cn(
@@ -267,6 +274,16 @@ export default function FinancialInsightsPage() {
                   </span>
                 </div>
                 <Progress value={Math.min(100, (metrics.ebitdaMargin / 30) * 100)} className="h-2" />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Budget Variance (Target: &lt; 5%)</span>
+                  <span className={totalVariancePct > 10 ? "text-rose-500" : "text-emerald-500"}>
+                    {totalVariancePct.toFixed(1)}%
+                  </span>
+                </div>
+                <Progress value={Math.min(100, totalVariancePct)} className={cn("h-2", totalVariancePct > 10 ? "[&>div]:bg-rose-500" : "")} />
               </div>
             </CardContent>
           </Card>

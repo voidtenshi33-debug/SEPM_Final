@@ -1,8 +1,9 @@
+
 'use client';
 
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
- * Handles EBITDA, Margins, Runway, Burn Rate, and Equity Dilution with INR support.
+ * Handles EBITDA, Margins, Runway, Burn Rate, and Budget Variance with INR support.
  */
 
 /**
@@ -141,12 +142,28 @@ export const calculateVestingProgress = (startDate: string | Date, years: number
 };
 
 /**
+ * Calculates Budget Variance indicators
+ */
+export const calculateBudgetVariance = (actualAmount: number, budgetAmount: number) => {
+  const variance = (actualAmount || 0) - (budgetAmount || 0);
+  const variancePct = budgetAmount > 0 ? (variance / budgetAmount) * 100 : 0;
+
+  return {
+    variance,
+    variancePct: variancePct.toFixed(1),
+    status: variance > 0 ? "OVER" : variance < 0 ? "UNDER" : "ON_TRACK"
+  };
+};
+
+/**
  * Generates actionable strategic insights
  */
 export const generateInsights = (data: { 
   runway: number; 
   ebitdaMargin: number; 
-  totalInvestorEquity: number 
+  totalInvestorEquity: number;
+  totalVariancePct?: number;
+  marketingVariancePct?: number;
 }) => {
   const reports = [];
   
@@ -165,6 +182,24 @@ export const generateInsights = (data: {
       msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
       type: 'Efficiency',
       icon: 'Activity'
+    });
+  }
+
+  if (data.totalVariancePct && data.totalVariancePct > 20) {
+    reports.push({
+      level: 'WARNING',
+      msg: "Operating expenses exceeding budget by >20%. Review discretionary spending.",
+      type: 'Budget Control',
+      icon: 'ShieldAlert'
+    });
+  }
+
+  if (data.marketingVariancePct && data.marketingVariancePct > 30) {
+    reports.push({
+      level: 'WARNING',
+      msg: "Marketing cost spike detected (>30% variance). Evaluate CAC efficiency immediately.",
+      type: 'Growth Efficiency',
+      icon: 'TrendingUp'
     });
   }
   
@@ -212,17 +247,4 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
   }, {} as Record<string, any>);
 
   return Object.values(grouped).sort((a, b) => b.amount - a.amount);
-};
-
-/**
- * Groups expenses by type
- */
-export const groupExpensesByType = (expenses: any[], categories: any[]) => {
-  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
-  
-  return expenses.reduce((acc, exp) => {
-    const type = catMap[exp.categoryId] || "Variable";
-    acc[type] = (acc[type] || 0) + exp.amount;
-    return acc;
-  }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };

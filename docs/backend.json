@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Category": {
@@ -20,10 +21,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Indicates whether the category is for 'expense' or 'income', helping in financial categorization.",
-          "items": {
-            "type": "string"
-          }
+          "description": "Indicates whether the category is for 'expense' or 'income', helping in financial categorization."
         }
       },
       "required": [
@@ -36,64 +34,51 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Budget",
       "type": "object",
-      "description": "Represents a monthly budget set by the startup, serving as a container for individual category budgets for a specific month.",
+      "description": "Represents a monthly budget target set by the startup personnel for various expense categories.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Budget entity."
+          "description": "The month ID in YYYY-MM format."
         },
         "month": {
           "type": "string",
-          "description": "The specific month for which this budget is set (e.g., '2026-03'). The format is YYYY-MM.",
-          "format": "YYYY-MM"
+          "description": "The specific month for this budget (YYYY-MM)."
+        },
+        "categoryBudgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "categoryId": { "type": "string" },
+              "budgetAmount": { "type": "number" }
+            }
+          }
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when this budget record was created.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
         "month",
-        "createdAt"
+        "categoryBudgets"
       ]
     },
-    "BudgetCategoryItem": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "BudgetCategoryItem",
+    "Leadership": {
+      "title": "Leadership",
       "type": "object",
-      "description": "Represents a single budgeted amount for a specific financial category, linked to a particular monthly budget.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the BudgetCategoryItem entity."
-        },
-        "budgetId": {
-          "type": "string",
-          "description": "Reference to the Budget entity to which this category budget belongs. (Relationship: Budget 1:N BudgetCategoryItem)"
-        },
-        "categoryId": {
-          "type": "string",
-          "description": "Reference to the Category entity being budgeted. (Relationship: Category 1:N BudgetCategoryItem)"
-        },
-        "budgetAmount": {
-          "type": "number",
-          "description": "The budgeted monetary amount allocated for this category for the month."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp indicating when this budget category item was created.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "budgetId",
-        "categoryId",
-        "budgetAmount",
-        "createdAt"
-      ]
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "roleTitle": { "type": "string" },
+        "equityPct": { "type": "number" },
+        "vestingYears": { "type": "number" },
+        "vestingStartDate": { "type": "string" },
+        "vestingEndDate": { "type": "string" },
+        "inviteStatus": { "type": "string", "enum": ["Pending", "Active"] }
+      }
     }
   },
   "auth": {
@@ -105,22 +90,15 @@
   "firestore": {
     "structure": [
       {
-        "path": "budgets/{budgetMonthId}",
+        "path": "budgets/{monthId}",
         "definition": {
           "entityName": "Budget",
           "schema": {
             "$ref": "#/backend/entities/Budget"
           },
-          "description": "Collection storing monthly budget documents. Each document's ID is the YYYY-MM string (e.g., '2026-03') for the month it represents. This document includes an embedded array 'categoryBudgets', where each item within the array conforms to the structure of the BudgetCategoryItem entity, allowing for atomic updates and authorization independence.",
-          "params": [
-            {
-              "name": "budgetMonthId",
-              "description": "The month in YYYY-MM format (e.g., '2026-03') for which the budget is set, serving as the document ID."
-            }
-          ]
+          "description": "Stores monthly budget targets for expense categories."
         }
       }
-    ],
-    "reasoning": "The recommended Firestore structure for the 'Budget vs Actual' blueprint prioritizes Authorization Independence and Structural Segregation to ensure robust, debuggable security rules and efficient data access. The core design revolves around a top-level collection: `/budgets/{budgetMonthId}`. Each document in this collection represents the complete budget for a specific month. The document ID itself will be the `YYYY-MM` string (e.g., '2026-03'), which aligns directly with the 'month' field within the document and simplifies data retrieval.\n\n**Authorization Independence:** This is achieved by embedding the `BudgetCategoryItem` data directly within the `Budget` document as an array named `categoryBudgets`. Since all category-specific budget amounts for a given month are part of a single `Budget` document, authorization rules only need to be applied at the `/budgets/{budgetMonthId}` level. This eliminates the need for `get()` calls in security rules to check parent document permissions for subcollection items, allowing for atomic create/update operations on an entire monthly budget and significantly simplifying rule logic. The `Budget` document will contain all necessary authorization context, such as a denormalized `ownerId` or `members` map, if multi-tenancy or fine-grained per-budget access were required. For the current scope, it's assumed all authenticated 'founders' (determined by a global role) can manage all budget documents.\n\n**Structural Segregation & QAPs (Rules are not Filters):** All documents within the `/budgets` collection share a homogeneous security posture: they are monthly budget records accessible by authorized startup personnel. This segregation ensures that security rules applied to this collection are straightforward and consistent across all its documents. For `list` operations (Query-Allowed Paths), a founder can securely query the `/budgets` collection to retrieve all monthly budget documents. Since authorization is handled at the document level (e.g., `allow read, write: if request.auth.uid != null && exists(/databases/$(database)/documents/roles_founder/$(request.auth.uid));`), the `list` operation will only return documents that the user is authorized to read, without needing complex filtering logic within the rules themselves. The embedded `categoryBudgets` array further simplifies this, as a single read operation for a monthly budget retrieves all its constituent category budgets securely and efficiently."
+    ]
   }
 }

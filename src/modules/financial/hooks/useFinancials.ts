@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser } from "@/firebase";
@@ -5,11 +6,12 @@ import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 
 /**
  * Custom hook to provide real-time financial and governance data.
- * Adheres strictly to the refined backend schema.
  */
-export function useFinancials() {
+export function useFinancials(selectedMonth?: string) {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+
+  const currentMonthId = selectedMonth || new Date().toISOString().substring(0, 7);
 
   // 1. Monthly Financials
   const financialsQuery = useMemoFirebase(() => {
@@ -20,7 +22,7 @@ export function useFinancials() {
   // 2. Funding Rounds
   const roundsQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null;
-    return query(collection(firestore, "rounds"), orderBy("roundDate", "desc"));
+    return query(collection(firestore, "rounds"), orderBy("startDate", "desc"));
   }, [firestore, user, isUserLoading]);
 
   // 3. Investors
@@ -47,7 +49,7 @@ export function useFinancials() {
     return query(collection(firestore, "expenseCategories"), orderBy("name", "asc"));
   }, [firestore, user, isUserLoading]);
 
-  // 7. Expenses
+  // 7. Expenses for selected month
   const expensesQuery = useMemoFirebase(() => {
     if (!user || isUserLoading) return null;
     return collection(firestore, "expenses");
@@ -59,6 +61,12 @@ export function useFinancials() {
     return doc(firestore, "startupProfile", "main");
   }, [firestore, user, isUserLoading]);
 
+  // 9. Budget for selected month
+  const budgetRef = useMemoFirebase(() => {
+    if (!user || isUserLoading) return null;
+    return doc(firestore, "budgets", currentMonthId);
+  }, [firestore, user, isUserLoading, currentMonthId]);
+
   const { data: financials, isLoading: loadingFin } = useCollection(financialsQuery);
   const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
   const { data: investors, isLoading: loadingInv } = useCollection(investorsQuery);
@@ -67,8 +75,9 @@ export function useFinancials() {
   const { data: categories, isLoading: loadingCats } = useCollection(categoriesQuery);
   const { data: expenses, isLoading: loadingExps } = useCollection(expensesQuery);
   const { data: profile, isLoading: loadingProfile } = useDoc(profileRef);
+  const { data: budget, isLoading: loadingBudget } = useDoc(budgetRef);
 
-  const isLoading = isUserLoading || loadingFin || loadingRounds || loadingInv || loadingLead || loadingCap || loadingCats || loadingExps || loadingProfile;
+  const isLoading = isUserLoading || loadingFin || loadingRounds || loadingInv || loadingLead || loadingCap || loadingCats || loadingExps || loadingProfile || loadingBudget;
 
   return {
     financials: financials || [],
@@ -79,6 +88,7 @@ export function useFinancials() {
     categories: categories || [],
     expenses: expenses || [],
     profile: profile || null,
+    budget: budget || null,
     isLoading,
     latestMonth: financials && financials.length > 0 ? financials[0] : null,
     prevMonth: financials && financials.length > 1 ? financials[1] : null,
