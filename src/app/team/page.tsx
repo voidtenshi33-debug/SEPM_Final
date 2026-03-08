@@ -4,7 +4,7 @@ import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail, Shield, Award, Copy, TrendingUp, Clock, AlertCircle, UserCheck } from "lucide-react";
+import { Mail, Shield, Award, Copy, TrendingUp, Clock, AlertCircle, UserCheck, Activity } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
@@ -50,9 +50,7 @@ export default function TeamPage() {
           const isPending = member.inviteStatus === "Pending";
           
           const memberTasks = tasks?.filter(t => t.assignedTo === member.name) || [];
-          const performanceScore = calculateMemberPerformance(memberTasks);
-          const activeTasks = memberTasks.filter(t => t.status !== 'Completed').length;
-          const overdueTasks = memberTasks.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length;
+          const performance = calculateMemberPerformance(memberTasks);
 
           return (
             <Card key={member.id} className="border-none shadow-xl hover:shadow-2xl transition-all overflow-hidden border-l-4" style={{ borderLeftColor: isPending ? '#F59E0B' : '#10B981' }}>
@@ -66,8 +64,8 @@ export default function TeamPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-bold text-slate-900 truncate text-lg">{member.name}</h3>
-                      <Badge className={performanceScore > 80 ? "bg-emerald-500" : performanceScore > 50 ? "bg-amber-500" : "bg-rose-500"}>
-                        {performanceScore}%
+                      <Badge className={performance.score > 80 ? "bg-emerald-500" : performance.score > 50 ? "bg-amber-500" : "bg-rose-500"}>
+                        {performance.score}%
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{member.title}</p>
@@ -78,20 +76,29 @@ export default function TeamPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Load</p>
-                    <p className="text-xl font-bold text-slate-900">{activeTasks} Tasks</p>
+                    <p className="text-xl font-bold text-slate-900">{performance.active} Tasks</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue</p>
-                    <p className={`text-xl font-bold ${overdueTasks > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{overdueTasks}</p>
+                    <p className={`text-xl font-bold ${performance.overdue > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{performance.overdue}</p>
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
-                    <span>Equity Vested</span>
-                    <span>{vestProgress}%</span>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
+                      <span>Reliability Index</span>
+                      <span className="text-blue-600">{performance.reliability}%</span>
+                    </div>
+                    <Progress value={performance.reliability} className="h-1.5 [&>div]:bg-blue-500" />
                   </div>
-                  <Progress value={parseFloat(vestProgress)} className="h-1.5" />
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
+                      <span>Equity Vested</span>
+                      <span>{vestProgress}%</span>
+                    </div>
+                    <Progress value={parseFloat(vestProgress)} className="h-1.5" />
+                  </div>
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -124,7 +131,7 @@ export default function TeamPage() {
              <div>
                 <h3 className="text-xl font-bold mb-2 font-headline">Accountability Layer</h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Performance scores are dynamically calculated using on-time task completion, weekly pulse consistency, and milestone throughput. This data is confidential and used for bonus approvals.
+                  Performance scores are dynamically calculated using on-time task completion, reliability indexing, and execution throughput. This data is confidential and used for bonus approvals.
                 </p>
                 <div className="flex gap-8">
                   <div>
@@ -148,7 +155,7 @@ export default function TeamPage() {
              <div>
                 <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity Enforcement</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Members with performance scores &gt; 90% are automatically flagged for <strong>Bonus Eligibility</strong> in the tactical task board. Use the access audit log to track individual contributions.
+                  Members with performance scores &gt; 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
                 </p>
                 <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
                    <Clock className="h-4 w-4 mr-2" /> Performance Audit

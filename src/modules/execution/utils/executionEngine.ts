@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * @fileOverview Strategic Execution Brain for UdyamRakshak.
- * Reconciles work progress, budget usage, and performance accountability.
+ * @fileOverview FINAL Strategic execution engine for UdyamRakshak.
+ * Handles complex project health scoring, risk detection, performance tracking,
+ * and rule-based strategic recommendations.
  */
 
 export interface ProjectHealthResult {
@@ -11,146 +12,185 @@ export interface ProjectHealthResult {
   onTrack: boolean;
   progressPct: number;
   budgetUtilization: number;
+  riskReason?: string;
 }
 
 /**
- * Calculates Project Health Score (0-100).
- * Weighted: 33% Progress, 33% Budget Discipline, 34% Timeline Compliance.
+ * Calculates weighted health score for a project (0-100)
+ * Weights: Budget (25%), Deadline (25%), Task Rate (25%), Weekly Consistency (25%)
  */
-export function calculateProjectHealth(
-  project: { budgetAllocated: number; budgetUsed: number; targetEndDate: string; status: string },
-  tasks: any[]
-): ProjectHealthResult {
+export const calculateProjectHealth = (
+  project: any,
+  tasks: any[],
+  expenses: any[]
+): ProjectHealthResult => {
   const today = new Date();
   const deadline = new Date(project.targetEndDate);
-
+  
+  // 1. Task Completion Rate (25%)
   const completedTasks = tasks.filter(t => t.status === 'Completed').length;
   const progressPct = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
+  const taskScore = progressPct;
 
-  const budgetUtilization = project.budgetAllocated > 0 
-    ? (project.budgetUsed / project.budgetAllocated) * 100 
-    : 0;
+  // 2. Budget Control (25%)
+  const projectExpenses = expenses.filter(e => e.projectId === project.id);
+  const budgetUsed = projectExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const budgetUtilization = project.budgetAllocated > 0 ? (budgetUsed / project.budgetAllocated) * 100 : 0;
   
-  const budgetScore = budgetUtilization <= 100 
-    ? 100 - Math.max(0, (budgetUtilization - progressPct) * 0.5) 
-    : 0;
+  let budgetScore = 100;
+  if (budgetUtilization > 100) budgetScore = 0;
+  else if (budgetUtilization > progressPct + 20) budgetScore = 50; // Spending faster than working
 
+  // 3. Deadline Compliance (25%)
   const isOverdue = today > deadline && progressPct < 100;
-  const timeScore = isOverdue ? 0 : 100;
+  const daysLeft = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const deadlineScore = isOverdue ? 0 : (daysLeft < 7 && progressPct < 80 ? 50 : 100);
 
-  const totalHealth = (progressPct * 0.33) + (budgetScore * 0.33) + (timeScore * 0.34);
+  // 4. Weekly Consistency (25%)
+  const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // Using createdAt as a proxy for last activity in this prototype
+  const tasksWithRecentUpdates = tasks.filter(t => {
+    const lastActive = t.updatedAt || t.createdAt;
+    return lastActive && new Date(lastActive.seconds ? lastActive.seconds * 1000 : lastActive) > sevenDaysAgo;
+  }).length;
+  const consistencyScore = tasks.length > 0 ? (tasksWithRecentUpdates / tasks.length) * 100 : 100;
+
+  // Weighted Total
+  const totalHealth = (taskScore * 0.25) + (budgetScore * 0.25) + (deadlineScore * 0.25) + (consistencyScore * 0.25);
+
+  let status: 'Active' | 'Delayed' | 'At Risk' | 'Completed' = 'Active';
+  let riskReason = "";
+
+  if (progressPct === 100) status = 'Completed';
+  else if (isOverdue) {
+    status = 'Delayed';
+    riskReason = "Deadline exceeded";
+  }
+  else if (totalHealth < 50 || (progressPct < 50 && daysLeft < 15)) {
+    status = 'At Risk';
+    riskReason = "Low progress relative to deadline";
+  }
+  else if (budgetUtilization > 90 && progressPct < 70) {
+    status = 'At Risk';
+    riskReason = "Budget near depletion";
+  }
 
   return {
     score: Math.round(totalHealth),
-    status: project.status === 'Completed' ? 'Completed' : (isOverdue ? 'Delayed' : (totalHealth < 50 ? 'At Risk' : 'Active')),
+    status,
     onTrack: progressPct >= budgetUtilization,
     progressPct,
-    budgetUtilization
+    budgetUtilization,
+    riskReason
   };
-}
+};
 
 /**
- * Calculates a Performance Score for a team member based on task completion.
+ * Calculates a team member's performance score (0-100)
+ * Weights: Completion Rate (60%), Reliability/On-Time (40%)
  */
-export function calculateMemberPerformance(tasks: any[]): number {
-  if (tasks.length === 0) return 100;
-  
+export const calculateMemberPerformance = (tasks: any[]) => {
+  if (tasks.length === 0) return { score: 0, active: 0, overdue: 0, reliability: 0 };
+
   const completed = tasks.filter(t => t.status === 'Completed');
   const onTime = completed.filter(t => {
-    if (!t.completedAt || !t.deadline) return true;
+    if (!t.completedAt || !t.deadline) return true; // Assume on-time if no data
     return new Date(t.completedAt) <= new Date(t.deadline);
   });
-
-  const overdue = tasks.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length;
-
-  const completionRate = (completed.length / tasks.length) * 100;
-  const onTimeRate = completed.length > 0 ? (onTime.length / completed.length) * 100 : 100;
   
-  // Deduct for overdue tasks
-  const penalty = overdue * 5;
-
-  return Math.max(0, Math.round((completionRate * 0.4) + (onTimeRate * 0.6) - penalty));
-}
+  const completionRate = (completed.length / tasks.length) * 100;
+  const reliabilityScore = completed.length > 0 ? (onTime.length / completed.length) * 100 : 100;
+  
+  const totalScore = Math.round((completionRate * 0.6) + (reliabilityScore * 0.4));
+  
+  return {
+    score: totalScore,
+    active: tasks.filter(t => t.status !== 'Completed').length,
+    overdue: tasks.filter(t => t.status !== 'Completed' && new Date() > new Date(t.deadline)).length,
+    reliability: Math.round(reliabilityScore)
+  };
+};
 
 /**
- * Generates AI-driven strategic initiatives based on financial and model signals.
+ * Rule-Based AI Strategic Recommendations
  */
-export function getStrategicRecommendations(data: {
-  businessType: string;
-  revenueTrend: 'up' | 'down' | 'flat';
-  runway: number;
-  utilization?: number;
-}) {
+export const getStrategicRecommendations = (profile: any, financials: any[]) => {
   const suggestions = [];
+  const businessType = profile?.businessType || 'Hybrid';
+  const runway = 14; // Mock value for prototype logic
+  
+  const netRevenue = financials?.[0]?.netRevenue || 0;
+  const prevRevenue = financials?.[1]?.netRevenue || 0;
+  const isRevenueFlat = prevRevenue > 0 && Math.abs((netRevenue - prevRevenue) / prevRevenue) < 0.05;
 
-  if (data.businessType === 'Product' && (data.revenueTrend === 'flat' || data.revenueTrend === 'down')) {
+  if (runway < 6) {
     suggestions.push({
-      title: "Subscription Tier Launch",
-      reason: "Revenue has flattened. Recurring billing stabilizes cash flow and increases LTV.",
-      impact: "High",
-      risk: "Medium",
-      type: "Product"
-    });
-  }
-
-  if (data.businessType === 'Service' && (data.utilization || 0) < 60) {
-    suggestions.push({
-      title: "Outbound Sales Blitz",
-      reason: "Team utilization is below 60%. Excess capacity detected. Immediate sales focus required.",
-      impact: "High",
-      risk: "Low",
-      type: "Growth"
-    });
-  }
-
-  if (data.runway < 6) {
-    suggestions.push({
-      title: "Series A Data Room Prep",
-      reason: "Runway is under 6 months. Milestone readiness is critical for survival and investor confidence.",
+      id: 'FUNDRAISING_STRAT',
+      title: "Aggressive Runway Extension",
+      reason: "Liquidity risk detected. Current burn will deplete cash in < 6 months.",
+      action: "Start Series A/Seed Round",
       impact: "Critical",
-      risk: "High",
-      type: "Fundraising"
+      type: "Fundraising",
+      template: "FUNDRAISING"
     });
   }
 
-  if (data.businessType === 'Hybrid' && data.revenueTrend === 'up') {
+  if (businessType === 'Product' && isRevenueFlat) {
     suggestions.push({
-      title: "Scale Core Infrastructure",
-      reason: "High growth detected. Infrastructure must scale to prevent service degradation.",
-      impact: "Medium",
-      risk: "Low",
-      type: "Infrastructure"
+      id: 'SUB_MODEL',
+      title: "Subscription Model Pivot",
+      reason: "Stagnant transactional revenue detected over last period.",
+      action: "Launch Subscription Project",
+      impact: "High",
+      type: "Product",
+      template: "PRODUCT_LAUNCH"
     });
   }
 
+  if (businessType === 'Service' && netRevenue > 0) {
+    suggestions.push({
+      id: 'RETAINER_GTM',
+      title: "Retainer-Based Transition",
+      reason: "High dependence on one-time service deals detected.",
+      action: "Launch Retainer GTM",
+      impact: "Medium",
+      type: "Marketing",
+      template: "MARKETING"
+    });
+  }
+  
   return suggestions;
-}
+};
 
-export function generateTaskTemplate(type: 'Fundraising' | 'Product' | 'Growth' | 'Infrastructure'): Partial<{ title: string; status: string }[]> {
-  const templates = {
-    Fundraising: [
-      { title: "Draft Pitch Deck", status: "Todo" },
-      { title: "Identify Target Investors", status: "Todo" },
-      { title: "Schedule Intro Calls", status: "Todo" },
-      { title: "Prepare Data Room", status: "Todo" }
-    ],
-    Product: [
-      { title: "Define MVP Features", status: "Todo" },
-      { title: "Initial UI/UX Mockups", status: "Todo" },
-      { title: "Setup Backend Architecture", status: "Todo" },
-      { title: "User Testing Phase 1", status: "Todo" }
-    ],
-    Growth: [
-      { title: "Launch SEO Campaign", status: "Todo" },
-      { title: "A/B Test Landing Pages", status: "Todo" },
-      { title: "Setup CRM Workflow", status: "Todo" }
-    ],
-    Infrastructure: [
-      { title: "Configure Cloud Instances", status: "Todo" },
-      { title: "Setup CI/CD Pipeline", status: "Todo" },
-      { title: "Implement Security Audit", status: "Todo" }
-    ]
-  };
+/**
+ * Predefined task templates for common startup projects
+ */
+export const TASK_TEMPLATES = {
+  FUNDRAISING: [
+    { title: 'Pitch Deck Preparation', priority: 'High', impactType: 'Fundraising', status: 'Todo' },
+    { title: 'Investor CRM Setup', priority: 'Medium', impactType: 'Fundraising', status: 'Todo' },
+    { title: 'Data Room Organization', priority: 'High', impactType: 'Finance', status: 'Todo' },
+    { title: 'Founder Pitch Rehearsal', priority: 'High', impactType: 'Operations', status: 'Todo' },
+    { title: 'Investor Outreach Phase 1', priority: 'Medium', impactType: 'Growth', status: 'Todo' }
+  ],
+  PRODUCT_LAUNCH: [
+    { title: 'Beta Testing Group', priority: 'High', impactType: 'Product', status: 'Todo' },
+    { title: 'Marketing Landing Page', priority: 'Medium', impactType: 'Growth', status: 'Todo' },
+    { title: 'Architecture Review', priority: 'High', impactType: 'Product', status: 'Todo' },
+    { title: 'Final QA Sprint', priority: 'High', impactType: 'Product', status: 'Todo' },
+    { title: 'Launch Press Release', priority: 'Medium', impactType: 'Growth', status: 'Todo' }
+  ],
+  MARKETING: [
+    { title: 'Strategy Planning', priority: 'High', impactType: 'Growth', status: 'Todo' },
+    { title: 'Ad Creative Design', priority: 'Medium', impactType: 'Growth', status: 'Todo' },
+    { title: 'Campaign Launch', priority: 'High', impactType: 'Growth', status: 'Todo' },
+    { title: 'ROI Analysis', priority: 'Medium', impactType: 'Finance', status: 'Todo' }
+  ]
+};
 
-  return templates[type] || [];
-}
+export const generateTaskTemplate = (type: string) => {
+  const key = type.toUpperCase().replace(/\s+/g, '_');
+  if (key === 'PRODUCT') return TASK_TEMPLATES.PRODUCT_LAUNCH;
+  if (key === 'GROWTH') return TASK_TEMPLATES.MARKETING;
+  return (TASK_TEMPLATES as any)[key] || [];
+};

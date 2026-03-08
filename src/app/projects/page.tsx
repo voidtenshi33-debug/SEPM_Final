@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from "react";
@@ -17,7 +16,8 @@ import {
   Plus, 
   Loader2,
   Briefcase,
-  Layout
+  Layout,
+  AlertOctagon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -30,11 +30,13 @@ export default function ProjectsPage() {
   const db = useFirestore();
   const projectsQuery = useMemoFirebase(() => query(collection(db, 'projects'), orderBy('targetEndDate', 'asc')), [db]);
   const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
+  const expensesQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
 
   const { data: projects, isLoading: loadingProjects } = useCollection(projectsQuery);
   const { data: tasks, isLoading: loadingTasks } = useCollection(tasksQuery);
+  const { data: expenses, isLoading: loadingExpenses } = useCollection(expensesQuery);
 
-  if (loadingProjects || loadingTasks) {
+  if (loadingProjects || loadingTasks || loadingExpenses) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -67,14 +69,14 @@ export default function ProjectsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {projects?.map((project) => {
               const projectTasks = tasks?.filter(t => t.projectId === project.id) || [];
-              const health = calculateProjectHealth(project, projectTasks);
+              const health = calculateProjectHealth(project, projectTasks, expenses || []);
 
               return (
                 <Card key={project.id} className="border-none shadow-xl hover:shadow-2xl transition-all group relative overflow-hidden">
                   <div className={`absolute top-0 left-0 w-1 h-full ${
                     health.status === 'Delayed' ? 'bg-rose-500' : 
                     health.status === 'At Risk' ? 'bg-amber-500' : 
-                    'bg-emerald-500'
+                    health.status === 'Completed' ? 'bg-emerald-500' : 'bg-blue-500'
                   }`} />
                   <CardHeader className="pb-4">
                     <div className="flex items-center justify-between mb-2">
@@ -114,6 +116,13 @@ export default function ProjectsPage() {
                         <Progress value={health.budgetUtilization} className={`h-1.5 ${health.onTrack ? '[&>div]:bg-slate-300' : '[&>div]:bg-rose-500 animate-pulse'}`} />
                       </div>
                     </div>
+
+                    {health.riskReason && (
+                      <div className="p-2 rounded-lg bg-rose-50 flex items-center gap-2 text-[10px] font-bold text-rose-600 uppercase">
+                        <AlertOctagon className="h-3 w-3" />
+                        Risk: {health.riskReason}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
                       <div className="flex flex-col">

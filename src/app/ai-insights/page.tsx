@@ -17,21 +17,13 @@ export default function AIInsightsPage() {
   const [insights, setInsights] = React.useState<GenerateStrategicInsightsOutput | null>(null);
   const { toast } = useToast();
   const db = useFirestore();
-  const { profile, latestMonth, prevMonth } = useFinancials();
+  const { profile, financials, latestMonth } = useFinancials();
 
   // Rule-based strategic suggestions based on live data
   const suggestions = React.useMemo(() => {
-    if (!profile || !latestMonth) return [];
-    
-    const revenueTrend = (latestMonth.netRevenue > (prevMonth?.netRevenue || 0)) ? 'up' : 'flat';
-    const runway = 42000000 / (latestMonth.operatingExpenses - latestMonth.netRevenue || 1);
-
-    return getStrategicRecommendations({
-      businessType: profile.businessType || 'Hybrid',
-      revenueTrend: revenueTrend as any,
-      runway: runway
-    });
-  }, [profile, latestMonth, prevMonth]);
+    if (!profile || !financials) return [];
+    return getStrategicRecommendations(profile, financials);
+  }, [profile, financials]);
 
   const handleGenerate = async () => {
     setLoading(true);
@@ -63,7 +55,7 @@ export default function AIInsightsPage() {
     try {
       await addDoc(collection(db, 'projects'), {
         name: suggestion.title,
-        type: suggestion.type === 'Growth' ? 'Growth' : suggestion.type === 'Product' ? 'Product' : 'Infrastructure',
+        type: suggestion.type,
         description: suggestion.reason,
         budgetAllocated: 50000,
         budgetUsed: 0,
