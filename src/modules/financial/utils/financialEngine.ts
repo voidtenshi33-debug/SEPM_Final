@@ -76,7 +76,7 @@ export const calculateDilution = (totalRaised: number, postMoney: number): numbe
 /**
  * Calculates remaining tenure/deal years
  */
-export const calcRemainingTenure = (endDate: string | Date | null): string => {
+export const calculateRemainingDealYears = (endDate: string | Date | null): string => {
   if (!endDate) return "0.0";
   try {
     const end = new Date(endDate).getTime();
@@ -88,6 +88,9 @@ export const calcRemainingTenure = (endDate: string | Date | null): string => {
     return "0.0";
   }
 };
+
+// Alias for UI components using old name
+export const calcRemainingTenure = calculateRemainingDealYears;
 
 /**
  * Calculates vesting progress percentage
@@ -200,7 +203,7 @@ export const analyzeRiskProfile = (data: {
   }
 
   // 4. Cash Flow Risk (Burn vs Revenue)
-  if (data.burnRate > data.netRevenue && data.netRevenue > 0) {
+  if (data.burnRate > data.netRevenue && (data.netRevenue || 0) > 0) {
     risks.push({
       level: 'WARNING',
       label: 'Negative Cash Cycle',
@@ -328,13 +331,13 @@ export const calculateBudgetVariance = (actualAmount: number, budgetAmount: numb
 
   return {
     variance,
-    variancePct: variancePct.toFixed(1),
+    variancePct: parseFloat(variancePct.toFixed(1)),
     status: variance > 0 ? "OVER" : (variance < 0 && Math.abs(variancePct) > 1) ? "UNDER" : "ON_TRACK"
   };
 };
 
 /**
- * Calculates Break-Even Analysis.
+ * Break-Even Analysis Intelligence
  */
 export const calculateBreakEvenAnalysis = (fixedCosts: number, totalRevenue: number, variableCosts: number) => {
   if (totalRevenue <= 0) return null;
