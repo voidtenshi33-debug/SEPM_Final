@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 
 /**
@@ -8,31 +8,37 @@ import { collection, query, orderBy, limit, doc } from "firebase/firestore";
  */
 export function useFinancials(startupId: string = "demo-startup") {
   const firestore = useFirestore();
+  const { user } = useUser();
 
   // 1. Monthly Financials (Last 12 months)
-  const financialsQuery = useMemoFirebase(() => 
-    query(collection(firestore, "financials"), orderBy("month", "desc"), limit(12)), 
-  [firestore]);
+  const financialsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "financials"), orderBy("month", "desc"), limit(12));
+  }, [firestore, user]);
   
   // 2. Funding Rounds
-  const roundsQuery = useMemoFirebase(() => 
-    query(collection(firestore, "rounds"), orderBy("roundDate", "desc")), 
-  [firestore]);
+  const roundsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "rounds"), orderBy("roundDate", "desc"));
+  }, [firestore, user]);
 
   // 3. Investors
-  const investorsQuery = useMemoFirebase(() => 
-    collection(firestore, "investors"), 
-  [firestore]);
+  const investorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "investors");
+  }, [firestore, user]);
 
   // 4. Leadership Team
-  const leadershipQuery = useMemoFirebase(() => 
-    collection(firestore, "leadership"), 
-  [firestore]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "leadership");
+  }, [firestore, user]);
 
   // 5. Cap Table Singleton
-  const capTableRef = useMemoFirebase(() => 
-    doc(firestore, "capitalStructure", startupId), 
-  [firestore, startupId]);
+  const capTableRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, "capitalStructure", startupId);
+  }, [firestore, startupId, user]);
 
   const { data: financials, isLoading: loadingFin } = useCollection(financialsQuery);
   const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);

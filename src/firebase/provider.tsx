@@ -5,6 +5,7 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -79,6 +80,10 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     const unsubscribe = onAuthStateChanged(
       auth,
       (firebaseUser) => { // Auth state determined
+        if (!firebaseUser) {
+          // Auto-trigger anonymous sign-in if no user is present
+          initiateAnonymousSignIn(auth);
+        }
         setUserAuthState({ user: firebaseUser, isUserLoading: false, userError: null });
       },
       (error) => { // Auth listener error
