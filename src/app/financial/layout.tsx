@@ -12,7 +12,8 @@ import {
   ShieldCheck, 
   Zap,
   Target,
-  Scale
+  Scale,
+  BrainCircuit
 } from "lucide-react";
 import { AddFinancialsModal } from "@/components/financials/add-financials-modal";
 import { AddExpenseModal } from "@/components/financials/add-expense-modal";
@@ -23,6 +24,7 @@ const subNavItems = [
   { name: "Budget vs Actual", href: "/financial/operational/budget", icon: Target },
   { name: "Sales Intelligence", href: "/financial/sales", icon: TrendingUp },
   { name: "Break-Even Intel", href: "/financial/break-even", icon: Scale },
+  { name: "Scenario Simulator", href: "/financial/simulator", icon: BrainCircuit },
   { name: "Cost Categories", href: "/financial/categories", icon: PieChart },
   { name: "Capital & Governance", href: "/financial/capital", icon: ShieldCheck },
   { name: "Strategic Insights", href: "/financial/insights", icon: Zap },

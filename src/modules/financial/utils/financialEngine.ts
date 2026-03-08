@@ -366,3 +366,42 @@ export const calculateBreakEvenAnalysis = (fixedCosts: number, totalRevenue: num
     gap: Math.abs(Math.round(totalRevenue - breakEvenPoint))
   };
 };
+
+/**
+ * Scenario Simulation Engine
+ */
+export const runFinancialSimulation = (currentData: {
+  netRevenue: number;
+  fixedCosts: number;
+  variableCosts: number;
+  cashBalance: number;
+}, sliders: {
+  revGrowth: number;
+  costCut: number;
+  fundingInjection: number;
+}) => {
+  // 1. Adjusted Revenue
+  const simRevenue = currentData.netRevenue * (1 + sliders.revGrowth / 100);
+  
+  // 2. Adjusted Variable Costs (e.g., Marketing, Sales)
+  const simVarCosts = currentData.variableCosts * (1 - sliders.costCut / 100);
+
+  // 3. New Totals
+  const totalSimExpenses = currentData.fixedCosts + simVarCosts;
+  const simEBITDA = simRevenue - totalSimExpenses;
+  const simMonthlyBurn = Math.max(0, totalSimExpenses - simRevenue);
+
+  // 4. New Runway (Current Cash + Injection / New Burn)
+  const totalCashAvailable = currentData.cashBalance + Number(sliders.fundingInjection);
+  const simRunway = simMonthlyBurn > 0 
+    ? (totalCashAvailable / simMonthlyBurn).toFixed(1) 
+    : "99.9"; // 99.9 is Infinity/Profitable alias in this engine
+
+  return {
+    simRevenue,
+    simEBITDA,
+    simRunway: parseFloat(simRunway as string),
+    burnImpact: simMonthlyBurn,
+    isProfitable: simEBITDA >= 0
+  };
+};
