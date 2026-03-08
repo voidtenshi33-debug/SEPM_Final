@@ -70,43 +70,41 @@ export function validateEquity(
 }
 
 /**
- * Logic for calculating categorical distribution of expenses.
+ * Logic for reconciling monthly expenses with global categories.
+ * Maps categoryId to names/types and calculates percentages.
  */
-export const calculateExpenseDistribution = (expenses: any[], categories: any[]) => {
-  const total = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-  if (total === 0) return { categories: [], fixedPct: 0, variablePct: 0, total: 0 };
+export const getMonthlyDistribution = (monthlyExpenses: any[], globalCategories: any[]) => {
+  if (!monthlyExpenses || monthlyExpenses.length === 0) return [];
 
-  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat }), {});
+  // 1. Create Lookup Map
+  const catMap = globalCategories.reduce((acc, cat) => ({ 
+    ...acc, 
+    [cat.id]: { name: cat.name, type: cat.type, color: cat.color || "#94A3B8" } 
+  }), {});
 
-  const distribution = expenses.reduce((acc, exp) => {
-    const cat = catMap[exp.categoryId];
+  // 2. Aggregate
+  const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  
+  const grouped = monthlyExpenses.reduce((acc, exp) => {
     const catId = exp.categoryId;
+    const cat = catMap[catId] || { name: "Uncategorized", type: "Variable", color: "#94A3B8" };
     if (!acc[catId]) {
-      acc[catId] = {
-        name: cat?.name || "Uncategorized",
-        type: cat?.type || "Variable",
-        amount: 0,
-        color: cat?.color || "#94A3B8"
+      acc[catId] = { 
+        name: cat.name, 
+        type: cat.type, 
+        color: cat.color,
+        amount: 0, 
+        percentage: 0 
       };
     }
     acc[catId].amount += exp.amount;
     return acc;
-  }, {} as any);
+  }, {});
 
-  const items = Object.values(distribution).map((item: any) => ({
+  return Object.values(grouped).map((item: any) => ({
     ...item,
-    percentage: (item.amount / total) * 100
+    percentage: total > 0 ? Number(((item.amount / total) * 100).toFixed(1)) : 0
   })).sort((a, b) => b.amount - a.amount);
-
-  const fixedAmount = items.filter(i => i.type === 'Fixed').reduce((s, i) => s + i.amount, 0);
-  const variableAmount = items.filter(i => i.type === 'Variable').reduce((s, i) => s + i.amount, 0);
-
-  return {
-    categories: items,
-    fixedPct: (fixedAmount / total) * 100,
-    variablePct: (variableAmount / total) * 100,
-    total
-  };
 };
 
 /**
