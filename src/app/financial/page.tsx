@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { Wallet, TrendingUp, ShieldCheck, Zap, Loader2, Target } from "lucide-react";
-import { calcEBITDA, calcRunway, formatINR, validateEquity } from "@/modules/financial/utils/financialEngine";
+import { calcEBITDA, calculateRunway, formatINR, validateEquity } from "@/modules/financial/utils/financialEngine";
 
 export default function FinancialOverview() {
   const { latestMonth, capTable, leadership, isLoading } = useFinancials();
@@ -19,7 +19,7 @@ export default function FinancialOverview() {
 
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const runway = calcRunway(168000, burn); 
+  const runway = calculateRunway(168000, burn); 
 
   const leadershipTotalEquity = leadership.reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   const { total } = validateEquity(

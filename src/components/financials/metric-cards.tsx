@@ -2,7 +2,7 @@
 
 import { KPICard } from "@/components/dashboard/kpi-card";
 import { TrendingDown, Activity, Wallet, Zap } from "lucide-react";
-import { calcEBITDA, calcRunway, formatINR } from "@/modules/financial/utils/financialEngine";
+import { calcEBITDA, calculateRunway, formatINR } from "@/modules/financial/utils/financialEngine";
 
 interface MetricCardsProps {
   currentFinancials: any | null;
@@ -15,7 +15,7 @@ export function MetricCards({ currentFinancials, prevFinancials, currentCash }: 
   const prevEbitda = prevFinancials ? calcEBITDA(prevFinancials.netRevenue, prevFinancials.operatingExpenses) : 0;
   
   const burnRate = currentFinancials ? Math.max(0, currentFinancials.operatingExpenses - currentFinancials.netRevenue) : 0;
-  const runway = calcRunway(currentCash, burnRate);
+  const runway = calculateRunway(currentCash, burnRate);
 
   const ebitdaTrend = ebitda >= prevEbitda;
   const ebitdaDiff = prevEbitda !== 0 ? ((ebitda - prevEbitda) / Math.abs(prevEbitda) * 100).toFixed(1) : "0";
