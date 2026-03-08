@@ -18,7 +18,8 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer
+  ResponsiveContainer,
+  Legend
 } from "recharts";
 import { 
   TrendingUp, 
@@ -64,6 +65,7 @@ export default function OperationalPage() {
   const opEx = currentMonthRecord?.operatingExpenses || 0;
   const ebitda = calcEBITDA(netRev, opEx);
   const margin = calcEBITDAMargin(ebitda, netRev);
+  const isProfitable = ebitda > 0;
   
   const prevNetRev = prevMonthRecord?.netRevenue || 0;
   const prevOpEx = prevMonthRecord?.operatingExpenses || 0;
@@ -136,26 +138,71 @@ export default function OperationalPage() {
 
       {/* Performance Chart */}
       <Card className="border-none shadow-xl bg-white">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Activity className="h-5 w-5 text-accent" />
-            Burn vs. Revenue intelligence
-          </CardTitle>
-          <CardDescription>Historical performance in INR (₹)</CardDescription>
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <CardTitle className="text-lg font-bold flex items-center gap-2">
+                <Activity className="h-5 w-5 text-accent" />
+                Burn vs. Revenue Intelligence
+              </CardTitle>
+              {currentMonthRecord && (
+                <Badge 
+                  variant={isProfitable ? "outline" : "destructive"} 
+                  className={isProfitable ? "bg-emerald-50 text-emerald-700 border-emerald-200 uppercase text-[10px] font-bold" : "uppercase text-[10px] font-bold"}
+                >
+                  {isProfitable ? "Operating Positive" : "Burning Cash"}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>Historical performance in INR (₹)</CardDescription>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+             <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-[#3B82F6]" /> Net Revenue</span>
+             <span className="flex items-center gap-1"><div className="h-2 w-2 rounded-full bg-[#0F172A]" /> OpEx</span>
+          </div>
         </CardHeader>
         <CardContent className="h-[450px] p-8 pt-0">
           {mounted ? (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
+              <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(v) => `₹${v/100000}L`} />
-                <Tooltip 
-                  formatter={(value: number) => formatINR(value)}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748B', fontSize: 11, fontWeight: 500}} 
+                  dy={10}
                 />
-                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={4} dot={{ r: 4, fill: '#3B82F6' }} name="Net Revenue" />
-                <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 4, fill: '#0F172A' }} name="OpEx" />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{fill: '#64748B', fontSize: 11, fontWeight: 500}} 
+                  tickFormatter={(v) => formatINR(v)} 
+                />
+                <Tooltip 
+                  formatter={(value: number) => [formatINR(value), ""]}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.1)', padding: '12px' }}
+                  labelStyle={{ fontWeight: 'bold', marginBottom: '4px', color: '#0F172A' }}
+                />
+                <Legend verticalAlign="top" height={36} align="right" iconType="circle" />
+                <Line 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke="#3B82F6" 
+                  strokeWidth={4} 
+                  dot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} 
+                  activeDot={{ r: 8, strokeWidth: 0 }}
+                  name="Net Revenue" 
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="expenses" 
+                  stroke="#0F172A" 
+                  strokeWidth={4} 
+                  dot={{ r: 6, fill: '#0F172A', strokeWidth: 2, stroke: '#fff' }} 
+                  activeDot={{ r: 8, strokeWidth: 0 }}
+                  name="OpEx" 
+                />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -176,7 +223,9 @@ export default function OperationalPage() {
              <div>
                 <h4 className="font-bold text-slate-900 mb-1 font-headline">Guardian Intelligence</h4>
                 <p className="text-sm text-muted-foreground leading-relaxed italic">
-                  {margin < 15 && margin > 0 ? (
+                  {!currentMonthRecord ? (
+                    "No data available for the current period. Please log your first operational record to enable intelligence tracking."
+                  ) : margin < 15 && margin > 0 ? (
                     "Efficiency Alert: Your EBITDA Margin is below 15%. Direct focus to variable OpEx optimization."
                   ) : margin >= 15 ? (
                     "Sustainable Growth: Your business model supports scaling. Current efficiency is healthy."
