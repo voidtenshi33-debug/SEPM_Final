@@ -1,32 +1,22 @@
 
 "use client"
 
-import React, { useEffect, useState } from "react"
-import { ShieldCheck, BrainCircuit, Activity, Target, Sparkles, Loader2, CheckCircle2 } from "lucide-react"
+import React, { useState } from "react"
+import { ShieldCheck, BrainCircuit, Activity, Target, Sparkles, Loader2, CheckCircle2, ArrowRight } from "lucide-react"
 import { useUser } from "@/firebase"
 import { useRouter } from "next/navigation"
 import { AuthForm } from "@/components/auth/auth-form"
+import { Button } from "@/components/ui/button"
 
 export default function WelcomePage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isLaunching, setIsLaunching] = useState(false);
 
-  useEffect(() => {
-    if (user && !isUserLoading) {
-      setIsRedirecting(true);
-      router.push("/");
-    }
-  }, [user, isUserLoading, router]);
-
-  if (isRedirecting || (user && !isUserLoading)) {
-    return (
-      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
-        <p className="text-sm font-bold uppercase tracking-widest text-slate-500 animate-pulse">Initializing Command Center...</p>
-      </div>
-    );
-  }
+  const handleLaunch = () => {
+    setIsLaunching(true);
+    router.push("/");
+  };
 
   return (
     <div className="min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-hidden flex flex-col md:flex-row relative">
@@ -94,12 +84,41 @@ export default function WelcomePage() {
       <div className="md:w-[500px] bg-white/[0.02] border-l border-white/5 backdrop-blur-xl flex flex-col justify-center p-8 md:p-12 relative z-10">
         <div className="animate-in fade-in zoom-in duration-700 delay-200">
           <div className="mb-10 text-center md:text-left">
-            <h3 className="text-2xl font-bold mb-2">Initialize Session</h3>
-            <p className="text-slate-400 text-sm">Access your startup's strategic DNA.</p>
+            <h3 className="text-2xl font-bold mb-2">
+              {user ? `Welcome back, ${user.displayName || 'Founder'}` : "Initialize Session"}
+            </h3>
+            <p className="text-slate-400 text-sm">
+              {user ? "Your Command Center session is ready." : "Access your startup's strategic DNA."}
+            </p>
           </div>
           
           <div className="bg-white/[0.03] border border-white/10 p-8 rounded-[2.5rem] shadow-2xl">
-            <AuthForm />
+            {user ? (
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20">
+                  <div className="h-12 w-12 rounded-full bg-blue-600 flex items-center justify-center text-xl font-bold">
+                    {(user.displayName || user.email || 'F')[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-bold truncate">{user.displayName || 'Strategic Founder'}</p>
+                    <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleLaunch} 
+                  disabled={isLaunching}
+                  className="w-full bg-blue-600 hover:bg-blue-700 h-14 text-base font-bold rounded-2xl shadow-xl shadow-blue-500/20 group"
+                >
+                  {isLaunching ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <><CheckCircle2 className="h-5 w-5 mr-2" /> Enter Command Center <ArrowRight className="h-4 w-4 ml-2 transition-transform group-hover:translate-x-1" /></>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <AuthForm />
+            )}
           </div>
 
           <div className="mt-12 p-6 rounded-2xl bg-blue-500/5 border border-blue-500/10 text-center">

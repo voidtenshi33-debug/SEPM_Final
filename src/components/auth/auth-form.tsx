@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/firebase';
-import { initiateEmailSignIn, initiateEmailSignUp, initiateAnonymousSignIn } from '@/firebase';
+import { initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -101,18 +101,10 @@ export function AuthForm() {
         </TabsContent>
       </Tabs>
 
-      <div className="mt-10 space-y-6">
-        <div className="relative w-full">
-          <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-white/5"></span></div>
-          <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-[0.2em]"><span className="bg-transparent px-4 text-slate-600">Prototyping Only</span></div>
-        </div>
-        <Button 
-          variant="ghost" 
-          onClick={() => initiateAnonymousSignIn(auth)} 
-          className="w-full text-slate-500 hover:text-white hover:bg-white/5 h-12 text-xs font-bold uppercase tracking-widest border border-white/5 rounded-2xl"
-        >
-          Initialize Guest Session
-        </Button>
+      <div className="mt-10 border-t border-white/5 pt-6 text-center">
+        <p className="text-[10px] text-slate-600 uppercase tracking-widest leading-relaxed">
+          Authorized Founder Access Only. <br /> All strategic signals are encrypted and audited.
+        </p>
       </div>
     </div>
   );
