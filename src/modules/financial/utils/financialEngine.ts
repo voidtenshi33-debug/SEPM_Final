@@ -2,7 +2,7 @@
 
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
- * Handles EBITDA, Margins, Runway, Burn Rate, and Equity Dilution with INR support.
+ * Handles EBITDA, Margins, Runway, Burn Rate, Equity Dilution, and Scenario Simulations.
  */
 
 /**
@@ -181,11 +181,11 @@ export const analyzeRiskProfile = (data: {
   }
 
   // 2. Governance Risk (Dilution)
-  if (data.totalInvestorPct > 40) {
+  if (data.totalInvestorPct > 45) {
     risks.push({ 
       level: 'CRITICAL', 
       label: 'Loss of Control', 
-      msg: 'Investor equity exceeds 40%. Founders may lose board control in the next round.', 
+      msg: 'Investor equity exceeds 45%. Founders may lose board control in the next round.', 
       icon: 'Users',
       action: 'Review Shareholder Agreement Control Clauses'
     });
@@ -368,40 +368,48 @@ export const calculateBreakEvenAnalysis = (fixedCosts: number, totalRevenue: num
 };
 
 /**
- * Scenario Simulation Engine
+ * Financial Scenario Simulator Engine
+ * Strictly Read-Only Logic.
  */
-export const runFinancialSimulation = (currentData: {
-  netRevenue: number;
-  fixedCosts: number;
-  variableCosts: number;
-  cashBalance: number;
-}, sliders: {
-  revGrowth: number;
-  costCut: number;
-  fundingInjection: number;
-}) => {
-  // 1. Adjusted Revenue
+export const runFinancialSimulation = (
+  currentData: { 
+    netRevenue: number; 
+    fixedCosts: number; 
+    variableCosts: number; 
+    cashBalance: number 
+  }, 
+  sliders: { 
+    revGrowth: number; 
+    costCut: number; 
+    fundingInjection: number 
+  }
+) => {
+  // 1. Adjusted Revenue based on growth slider
   const simRevenue = currentData.netRevenue * (1 + sliders.revGrowth / 100);
   
-  // 2. Adjusted Variable Costs (e.g., Marketing, Sales)
+  // 2. Adjusted Variable Costs based on cost cut slider
   const simVarCosts = currentData.variableCosts * (1 - sliders.costCut / 100);
-
-  // 3. New Totals
+  
+  // 3. Simulated Totals
   const totalSimExpenses = currentData.fixedCosts + simVarCosts;
   const simEBITDA = simRevenue - totalSimExpenses;
-  const simMonthlyBurn = Math.max(0, totalSimExpenses - simRevenue);
-
-  // 4. New Runway (Current Cash + Injection / New Burn)
-  const totalCashAvailable = currentData.cashBalance + Number(sliders.fundingInjection);
-  const simRunway = simMonthlyBurn > 0 
-    ? (totalCashAvailable / simMonthlyBurn).toFixed(1) 
-    : "99.9"; // 99.9 is Infinity/Profitable alias in this engine
+  const simMonthlyBurn = totalSimExpenses - simRevenue;
+  
+  // 4. New Runway Projection
+  const totalCashAvailable = currentData.cashBalance + sliders.fundingInjection;
+  
+  let simRunway: number;
+  if (simMonthlyBurn <= 0) {
+    simRunway = 99.9; // Infinity / Profitable marker
+  } else {
+    simRunway = parseFloat((totalCashAvailable / simMonthlyBurn).toFixed(1));
+  }
 
   return {
     simRevenue,
     simEBITDA,
-    simRunway: parseFloat(simRunway as string),
-    burnImpact: simMonthlyBurn,
-    isProfitable: simEBITDA >= 0
+    simRunway,
+    burnImpact: simMonthlyBurn > 0 ? simMonthlyBurn : 0,
+    totalSimExpenses
   };
 };

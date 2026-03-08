@@ -56,7 +56,7 @@ export default function ScenarioSimulatorPage() {
     netRevenue: latestMonth?.netRevenue || 0,
     fixedCosts: (costGroups.Fixed || 0) + (costGroups["R&D"] || 0),
     variableCosts: costGroups.Variable || 0,
-    cashBalance: 42000000 // Mock base cash
+    cashBalance: 42000000 // Mock base cash ₹4.2Cr
   };
 
   const baseEBITDA = baseData.netRevenue - (baseData.fixedCosts + baseData.variableCosts);
@@ -181,7 +181,7 @@ export default function ScenarioSimulatorPage() {
               Strategic Guard
             </h4>
             <p className="text-xs leading-relaxed opacity-90">
-              Simulations are <strong>Read-Only</strong>. Feel free to model aggressive growth or emergency cuts without affecting your actual Firestore data records.
+              Simulations are <strong>Read-Only</strong>. Feel free to model aggressive growth or emergency cuts without affecting your actual records.
             </p>
           </Card>
         </div>
