@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -35,7 +34,7 @@ import {
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
-  { title: "Financial Health", icon: Wallet, url: "/financials" },
+  { title: "Financial Center", icon: Wallet, url: "/financial" },
 ];
 
 const operationsNavItems = [
@@ -62,7 +61,7 @@ export function AppSidebar() {
     <SidebarMenu>
       {items.map((item) => (
         <SidebarMenuItem key={item.title}>
-          <SidebarMenuButton asChild isActive={pathname === item.url} tooltip={item.title}>
+          <SidebarMenuButton asChild isActive={pathname.startsWith(item.url) && (item.url !== '/' || pathname === '/')} tooltip={item.title}>
             <Link href={item.url}>
               <item.icon />
               <span>{item.title}</span>
