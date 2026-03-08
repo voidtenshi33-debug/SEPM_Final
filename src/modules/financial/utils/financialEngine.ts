@@ -22,7 +22,7 @@ export const calcEBITDAMargin = (ebitda: number, netRevenue: number): number =>
  * Estimates runway in months based on current cash and average burn
  */
 export function calculateRunway(currentCash: number, monthlyBurn: number): number {
-  if (monthlyBurn <= 0) return 999;
+  if (monthlyBurn <= 0) return 99.9;
   return parseFloat((currentCash / monthlyBurn).toFixed(1));
 }
 
@@ -61,7 +61,7 @@ export const formatINR = (amount: number | undefined | null): string =>
   }).format(amount || 0);
 
 /**
- * Validates if the cap table total equity split is within the 100% threshold
+ * Validates if the cap table total equity split is within legal thresholds
  */
 export function validateEquity(
   founderPct: number, 
@@ -105,7 +105,6 @@ export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
 
 /**
  * Calculates Health Score (0-100) based on Rakshak (Protector) logic.
- * Deductions based on critical financial and equity benchmarks.
  */
 export const calculateHealthScore = (data: { 
   runway: number; 
@@ -142,19 +141,15 @@ export const calculateVestingProgress = (startDate: string | Date, years: number
 };
 
 /**
- * Generates actionable strategic insights based on financial and capital state.
+ * Generates actionable strategic insights
  */
 export const generateInsights = (data: { 
   runway: number; 
   ebitdaMargin: number; 
-  burnRate: number;
-  netRevenue: number;
-  founderEquity: number;
   totalInvestorEquity: number 
 }) => {
   const reports = [];
   
-  // Critical Alerts
   if (data.runway < 6) {
     reports.push({ 
       level: 'CRITICAL', 
@@ -164,7 +159,6 @@ export const generateInsights = (data: {
     });
   }
   
-  // Operational Advice
   if (data.ebitdaMargin < 15) {
     reports.push({ 
       level: 'WARNING', 
@@ -174,7 +168,6 @@ export const generateInsights = (data: {
     });
   }
   
-  // Capital Advice
   if (data.totalInvestorEquity > 30) {
     reports.push({ 
       level: 'ADVISORY', 
@@ -188,18 +181,16 @@ export const generateInsights = (data: {
 };
 
 /**
- * Aggregates monthly expenses by category and calculates percentages.
+ * Aggregates monthly expenses by category
  */
 export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
   if (!monthlyExpenses || monthlyExpenses.length === 0 || !globalCategories) return [];
 
-  // 1. Create Lookup Map
   const catMap = globalCategories.reduce((acc, cat) => ({ 
     ...acc, 
     [cat.id]: { name: cat.name, type: cat.type } 
   }), {} as Record<string, { name: string, type: string }>);
 
-  // 2. Aggregate
   const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   
   const grouped = monthlyExpenses.reduce((acc, exp) => {
@@ -224,7 +215,7 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
 };
 
 /**
- * Groups expenses by their category type (Fixed/Variable)
+ * Groups expenses by type
  */
 export const groupExpensesByType = (expenses: any[], categories: any[]) => {
   const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
