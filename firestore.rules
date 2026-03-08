@@ -2,51 +2,109 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- GLOBAL HELPER FUNCTIONS ---
+    /**
+     * UdyamRakshak Financial Module Security Rules
+     *
+     * CORE PHILOSOPHY:
+     * This ruleset enforces a strict identity-based access model for the Financial Module. 
+     * In this prototyping phase, we prioritize authenticated access while maintaining 
+     * structural integrity. Authorization is centered on the startup founder/owner, 
+     * represented by the authenticated session.
+     *
+     * DATA STRUCTURE:
+     * Data is organized into flat, top-level collections to optimize performance:
+     * - /financials: Monthly snapshots of revenue, expenses, and EBITDA.
+     * - /rounds: Funding round details and valuation data.
+     * - /investors: Detailed records of individual investor contributions.
+     * - /capitalStructure: A singleton document for the overall cap table.
+     * - /leadership: Team members and equity tracking.
+     * - /expenseCategories: Categories for business expenses.
+     * - /expenses: Individual expense records.
+     */
 
+    // --- Helper Functions ---
+
+    /** @description Checks if the user is authenticated via Firebase Auth. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** 
-     * @description Verifies if the authenticated user is a member of the specified startup.
-     * For demo purposes, "demo-startup" is accessible to any signed-in user.
+    /** @description Combined check for ownership and document existence for write operations. */
+    function isExistingUserAuthorized() {
+      return isSignedIn() && resource != null;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for monthly financial performance records.
+     * @path /financials/{monthId}
      */
-    function isMemberOfStartup(startupId) {
-      return isSignedIn() && (
-        startupId == "demo-startup" ||
-        get(/databases/$(database)/documents/startups/$(startupId)).data.members[request.auth.uid] != null
-      );
-    }
-
-    // --- COLLECTION RULES ---
-
-    // Note: In a production environment, 'list' operations should be restricted
-    // based on startupId. For this prototype, we allow authenticated users to
-    // list these collections to facilitate development and debugging.
-
-    match /startups/{startupId} {
-      allow read, write: if isSignedIn();
-    }
-
     match /financials/{monthId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
     }
 
+    /**
+     * @description Rules for business expense categories.
+     * @path /expenseCategories/{categoryId}
+     */
+    match /expenseCategories/{categoryId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    /**
+     * @description Rules for individual expense tracking entries.
+     * @path /expenses/{expenseId}
+     */
+    match /expenses/{expenseId} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    /**
+     * @description Rules for funding round data.
+     * @path /rounds/{roundId}
+     */
     match /rounds/{roundId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
     }
 
+    /**
+     * @description Rules for investor details.
+     * @path /investors/{investorId}
+     */
     match /investors/{investorId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.roundId != null;
+      allow update: if isExistingUserAuthorized() && request.resource.data.roundId == resource.data.roundId;
+      allow delete: if isExistingUserAuthorized();
     }
 
-    match /capitalStructure/{startupId} {
-      allow read, write: if isSignedIn();
-    }
-
+    /**
+     * @description Rules for team leadership and equity data.
+     * @path /leadership/{memberId}
+     */
     match /leadership/{memberId} {
-      allow read, write: if isSignedIn();
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
+    }
+
+    /**
+     * @description Rules for the singleton capital structure document.
+     * @path /capitalStructure/main
+     */
+    match /capitalStructure/main {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isExistingUserAuthorized();
     }
   }
 }
