@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
  * Ensures consistent math across all financial sub-modules.
@@ -110,9 +109,8 @@ export const getMonthlyDistribution = (monthlyExpenses: any[], globalCategories:
 };
 
 /**
- * Adaptive Sales Intelligence Logic
+ * Adaptive Sales Intelligence Logic with Division Guards
  */
-
 export const calculateProductMetrics = (data: any) => ({
   aov: data.ordersCount > 0 ? (data.netRevenue || 0) / data.ordersCount : 0,
   revenuePerUnit: data.unitsSold > 0 ? (data.netRevenue || 0) / data.unitsSold : 0,
@@ -128,7 +126,6 @@ export const calculateServiceMetrics = (data: any, teamSize: number = 1) => ({
 /**
  * Intelligence Layer Extensions
  */
-
 export interface HealthMetrics {
   runway: number;
   ebitdaMargin: number;
