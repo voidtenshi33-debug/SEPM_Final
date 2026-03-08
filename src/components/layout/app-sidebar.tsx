@@ -17,7 +17,6 @@ import {
   Tags,
   Zap,
   Target,
-  Calendar,
   FolderLock
 } from "lucide-react";
 import Link from "next/link";
@@ -38,7 +37,6 @@ import {
 
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
-  { title: "Founder Schedule", icon: Calendar, url: "/schedule" },
   { title: "Document Vault", icon: FolderLock, url: "/documents" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
 ];

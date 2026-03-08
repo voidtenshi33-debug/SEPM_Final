@@ -91,13 +91,7 @@ service cloud.firestore {
       }
     }
 
-    // --- Schedule & Documents Rules ---
-
-    match /schedule/{blockId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
+    // --- Documents Rules ---
 
     match /documents/{docId} {
       allow get, list: if isSignedIn();

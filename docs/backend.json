@@ -198,19 +198,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       }
     },
-    "ScheduleBlock": {
-      "title": "ScheduleBlock",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "title": { "type": "string" },
-        "startTime": { "type": "string" },
-        "endTime": { "type": "string" },
-        "type": { "type": "string", "enum": ["Deep Work", "Meeting", "Routine"] },
-        "date": { "type": "string", "format": "date" }
-      },
-      "required": ["title", "startTime", "endTime", "type", "date"]
-    },
     "Document": {
       "title": "Document",
       "type": "object",
@@ -240,7 +227,6 @@
     "projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
     "tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
     "tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." },
-    "schedule/{blockId}": { "schema": "ScheduleBlock", "description": "Daily founder schedule blocks." },
     "documents/{docId}": { "schema": "Document", "description": "Strategic document vault." }
   }
 }

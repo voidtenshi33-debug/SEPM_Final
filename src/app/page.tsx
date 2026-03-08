@@ -25,7 +25,6 @@ import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { calculateProjectHealth } from "@/modules/execution/utils/executionEngine";
-import { ScheduleWidget } from "@/components/dashboard/schedule-widget";
 import { 
   AreaChart, 
   Area, 
@@ -121,7 +120,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <PageHeader 
         title="Command Center" 
-        description="Unified oversight of your startup's execution, financial health, and tactical schedule."
+        description="Unified oversight of your startup's execution, financial health, and strategic roadmap."
         actions={
           <div className="flex gap-2">
             <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-white" asChild>
@@ -274,8 +273,6 @@ export default function DashboardPage() {
 
         {/* Tactical Column */}
         <div className="space-y-8">
-          <ScheduleWidget />
-
           <Card className="border-none shadow-xl bg-white">
             <CardHeader>
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
