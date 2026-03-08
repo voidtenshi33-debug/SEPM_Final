@@ -317,7 +317,7 @@ export const groupExpensesByType = (expenses: any[], categories: any[]) => {
   const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
   return expenses.reduce((acc, exp) => {
     const type = catMap[exp.categoryId] || "Variable";
-    acc[type] = (acc[type] || 0) + (exp.amount || 0);
+    acc[type] = (acc[type] || 0) + exp.amount;
     return acc;
   }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };
