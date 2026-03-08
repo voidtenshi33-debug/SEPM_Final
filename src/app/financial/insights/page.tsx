@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from "react";
@@ -6,6 +5,7 @@ import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { 
   ShieldCheck, 
   FileDown, 
@@ -75,8 +75,11 @@ export default function FinancialInsightsPage() {
   const totalInvestorPct = (investors || []).reduce((sum, inv) => sum + (inv.equityPct || 0), 0);
   const leadEquity = (leadership || []).reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   
+  // Mock cash for prototype
+  const currentCash = 42000000;
+
   const metrics = {
-    runway: calculateRunway(168000, burn), // Fixed cash for prototype
+    runway: calculateRunway(currentCash, burn),
     ebitdaMargin: latestMonth ? calcEBITDAMargin(ebitda, latestMonth.netRevenue) : 0,
     burnRate: burn,
     netRevenue: latestMonth?.netRevenue || 0,
@@ -88,7 +91,7 @@ export default function FinancialInsightsPage() {
 
   const healthScore = calculateHealthScore({
     ...metrics,
-    founderEquity: metrics.founderEquity // Health score expects explicit prop
+    founderEquity: metrics.founderEquity
   });
   
   const insights = generateInsights({
@@ -133,31 +136,13 @@ export default function FinancialInsightsPage() {
     });
 
     const finalY = (doc as any).lastAutoTable.finalY || 50;
-    doc.text("2. Ownership Snapshot", 14, finalY + 15);
+    doc.text("2. Strategic Risk Assessment", 14, finalY + 15);
     
     autoTable(doc, {
       startY: finalY + 20,
-      head: [['Stakeholder', 'Equity %']],
-      body: [
-        ['Founders', `${metrics.founderEquity}%`],
-        ['Investors', `${metrics.totalInvestorPct}%`],
-        ['Leadership', `${leadEquity}%`],
-        ['ESOP', `${capTable?.esopPct || 0}%`],
-      ],
+      head: [['Risk Level', 'Type', 'Recommended Action']],
+      body: risks.map(r => [r.level, r.label, r.action]),
       theme: 'grid'
-    });
-
-    const secondY = (doc as any).lastAutoTable.finalY || 120;
-    doc.text("3. Strategic Risk Assessment", 14, secondY + 15);
-    doc.setFontSize(10);
-    let currentY = secondY + 25;
-    risks.forEach((risk, i) => {
-      doc.setFont("helvetica", "bold");
-      doc.text(`${i + 1}. [${risk.level}] ${risk.label}`, 14, currentY);
-      doc.setFont("helvetica", "normal");
-      const splitText = doc.splitTextToSize(risk.msg, 170);
-      doc.text(splitText, 45, currentY);
-      currentY += (splitText.length * 5) + 5;
     });
 
     doc.save("UdyamRakshak_Executive_Report.pdf");
@@ -178,21 +163,21 @@ export default function FinancialInsightsPage() {
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
+          <h2 className="text-2xl font-bold flex items-center gap-2 font-headline">
             <HeartPulse className="h-6 w-6 text-accent" />
-            War Room: Strategic Intelligence
+            Strategic Intelligence Center
           </h2>
           <p className="text-muted-foreground">Proactive risk detection and survival monitoring layer.</p>
         </div>
         <Button onClick={handleExportPDF} className="bg-primary hover:bg-primary/90 shadow-lg">
           <FileDown className="h-4 w-4 mr-2" />
-          Download Executive Report (₹)
+          Download Executive Brief (₹)
         </Button>
       </div>
 
-      {/* 1. Proactive Risk Monitoring View */}
+      {/* 1. Proactive Risk Monitoring (Traffic Light System) */}
       <section className="space-y-4">
-        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2">
+        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-500 flex items-center gap-2 px-1">
           <ShieldAlert className="h-4 w-4 text-rose-500" />
           Risk Guardian Assessment
         </h3>
@@ -283,7 +268,7 @@ export default function FinancialInsightsPage() {
               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Health Score</span>
             </div>
           </div>
-          <CardTitle className="text-white">Situational Stability</CardTitle>
+          <CardTitle className="text-white font-headline">Situational Stability</CardTitle>
           <CardDescription className="mt-2 text-slate-400">
             Dynamic assessment of survival runway, unit economics, and governance health.
           </CardDescription>

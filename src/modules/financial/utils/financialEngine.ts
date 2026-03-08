@@ -1,9 +1,8 @@
-
 'use client';
 
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
- * Handles EBITDA, Margins, Runway, Burn Rate, Budget Variance, and Risk Analysis with INR support.
+ * Handles EBITDA, Margins, Runway, Burn Rate, and Equity Dilution with INR support.
  */
 
 /**
@@ -36,22 +35,6 @@ export function calculateGrowth(current: number, previous: number): number {
 }
 
 /**
- * Calculates remaining tenure in years for deals or vesting
- */
-export const calcRemainingTenure = (endDate: string | Date | null): string => {
-  if (!endDate) return "0.0";
-  try {
-    const end = new Date(endDate).getTime();
-    const now = new Date().getTime();
-    const diff = end - now;
-    const years = diff / (1000 * 60 * 60 * 24 * 365.25);
-    return years > 0 ? years.toFixed(1) : "0.0";
-  } catch (e) {
-    return "0.0";
-  }
-};
-
-/**
  * Formats currency to INR (₹) using en-IN locale
  */
 export const formatINR = (amount: number | undefined | null): string =>
@@ -62,7 +45,7 @@ export const formatINR = (amount: number | undefined | null): string =>
   }).format(amount || 0);
 
 /**
- * Validates if the cap table total equity split is within legal thresholds
+ * Validates the cap table total equity split
  */
 export function validateEquity(
   founderPct: number, 
@@ -85,41 +68,25 @@ export const calculatePostMoney = (preMoney: number, totalRaised: number): numbe
   (preMoney || 0) + (totalRaised || 0);
 
 /**
- * Product-specific sales metrics
+ * Calculates dilution based on a new round
  */
-export const calculateProductMetrics = (data: any) => ({
-  aov: data.ordersCount > 0 ? (data.netRevenue || 0) / data.ordersCount : 0,
-  revenuePerUnit: data.unitsSold > 0 ? (data.netRevenue || 0) / data.unitsSold : 0,
-  dailyOrderAvg: (data.ordersCount || 0) / 30 
-});
+export const calculateDilution = (totalRaised: number, postMoney: number): number =>
+  postMoney > 0 ? (totalRaised / postMoney) * 100 : 0;
 
 /**
- * Service-specific sales metrics
+ * Calculates remaining tenure/deal years
  */
-export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
-  revenuePerClient: data.activeClients > 0 ? (data.netRevenue || 0) / data.activeClients : 0,
-  utilizationRate: (teamSize > 0) ? ((data.billableHours || 0) / (teamSize * 160)) * 100 : 0,
-  clientRetention: (data.totalClients > 0) 
-    ? ((data.retainedClients || 0) / data.totalClients) * 100 
-    : 0
-});
-
-/**
- * Calculates Health Score (0-100) based on Rakshak (Protector) logic.
- */
-export const calculateHealthScore = (data: { 
-  runway: number; 
-  ebitdaMargin: number; 
-  burnRate: number; 
-  netRevenue: number; 
-  founderEquity: number 
-}): number => {
-  let score = 100;
-  if (data.runway < 6) score -= 30;
-  if (data.ebitdaMargin < 15) score -= 20;
-  if (data.burnRate > data.netRevenue) score -= 15;
-  if (data.founderEquity < 51) score -= 10;
-  return Math.max(score, 0);
+export const calcRemainingTenure = (endDate: string | Date | null): string => {
+  if (!endDate) return "0.0";
+  try {
+    const end = new Date(endDate).getTime();
+    const now = new Date().getTime();
+    const diff = end - now;
+    const years = diff / (1000 * 60 * 60 * 24 * 365.25);
+    return years > 0 ? years.toFixed(1) : "0.0";
+  } catch (e) {
+    return "0.0";
+  }
 };
 
 /**
@@ -142,17 +109,108 @@ export const calculateVestingProgress = (startDate: string | Date, years: number
 };
 
 /**
- * Calculates Budget Variance indicators
+ * Product-specific sales metrics
  */
-export const calculateBudgetVariance = (actualAmount: number, budgetAmount: number) => {
-  const variance = (actualAmount || 0) - (budgetAmount || 0);
-  const variancePct = budgetAmount > 0 ? (variance / budgetAmount) * 100 : 0;
+export const calculateProductMetrics = (data: any) => ({
+  aov: (data.ordersCount || 0) > 0 ? (data.netRevenue || 0) / data.ordersCount : 0,
+  revenuePerUnit: (data.unitsSold || 0) > 0 ? (data.netRevenue || 0) / data.unitsSold : 0,
+  dailyOrderAvg: (data.ordersCount || 0) / 30 
+});
 
-  return {
-    variance,
-    variancePct: variancePct.toFixed(1),
-    status: variance > 0 ? "OVER" : (variance < 0 && Math.abs(variancePct) > 1) ? "UNDER" : "ON_TRACK"
-  };
+/**
+ * Service-specific sales metrics
+ */
+export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
+  revenuePerClient: (data.activeClients || 0) > 0 ? (data.netRevenue || 0) / data.activeClients : 0,
+  utilizationRate: (teamSize > 0) ? ((data.billableHours || 0) / (teamSize * 160)) * 100 : 0,
+  clientRetention: (data.totalClients || 0) > 0 
+    ? ((data.retainedClients || 0) / data.totalClients) * 100 
+    : 0
+});
+
+/**
+ * Calculates Health Score
+ */
+export const calculateHealthScore = (data: { 
+  runway: number; 
+  ebitdaMargin: number; 
+  burnRate: number; 
+  netRevenue: number; 
+  founderEquity: number 
+}): number => {
+  let score = 100;
+  if (data.runway < 6) score -= 30;
+  if (data.ebitdaMargin < 15) score -= 20;
+  if (data.burnRate > data.netRevenue) score -= 15;
+  if (data.founderEquity < 51) score -= 10;
+  return Math.max(score, 0);
+};
+
+/**
+ * Proactive Risk Monitoring Engine
+ */
+export const analyzeRiskProfile = (data: {
+  runway: number;
+  totalInvestorPct: number;
+  ebitdaMargin: number;
+  netRevenue: number;
+  burnRate: number;
+}) => {
+  const risks = [];
+
+  // 1. Survival Risk (Runway)
+  if (data.runway < 3) {
+    risks.push({ 
+      level: 'CRITICAL', 
+      label: 'Insolvency Risk', 
+      msg: 'Runway < 3 months. Immediate capital injection or 40% cost cut required.', 
+      icon: 'AlertOctagon',
+      action: 'Execute Emergency Burn Reduction Plan'
+    });
+  } else if (data.runway < 6) {
+    risks.push({ 
+      level: 'WARNING', 
+      label: 'Liquidity Stress', 
+      msg: 'Runway < 6 months. Begin fundraising or pause non-essential hiring.', 
+      icon: 'AlertTriangle',
+      action: 'Open Strategic Funding Round'
+    });
+  }
+
+  // 2. Governance Risk (Dilution)
+  if (data.totalInvestorPct > 45) {
+    risks.push({ 
+      level: 'CRITICAL', 
+      label: 'Loss of Control', 
+      msg: 'Investor equity exceeds 45%. Founders may lose board control in the next round.', 
+      icon: 'Users',
+      action: 'Review Shareholder Agreement Control Clauses'
+    });
+  }
+
+  // 3. Efficiency Risk (EBITDA)
+  if (data.ebitdaMargin < 10) {
+    risks.push({ 
+      level: 'ADVISORY', 
+      label: 'Margin Compression', 
+      msg: 'EBITDA < 10%. Business model lacks operational leverage. Review COGS.', 
+      icon: 'TrendingDown',
+      action: 'Conduct Category-Level Cost Rigidity Audit'
+    });
+  }
+
+  // 4. Cash Flow Risk (Burn vs Revenue)
+  if (data.burnRate > data.netRevenue && data.netRevenue > 0) {
+    risks.push({
+      level: 'WARNING',
+      label: 'Negative Cash Cycle',
+      msg: 'Monthly burn exceeds revenue. Business is not yet self-sustaining.',
+      icon: 'TrendingDown',
+      action: 'Calibrate Revenue Velocity vs OpEx Burn'
+    });
+  }
+
+  return risks;
 };
 
 /**
@@ -216,74 +274,6 @@ export const generateInsights = (data: {
 };
 
 /**
- * Analyzes the risk profile based on "Guardian" logic.
- * Proactive vs Reactive alerts for Insolvency, Dilution, and Efficiency.
- */
-export const analyzeRiskProfile = (data: {
-  runway: number;
-  totalInvestorPct: number;
-  ebitdaMargin: number;
-  burnRate: number;
-  netRevenue: number;
-}) => {
-  const risks = [];
-
-  // 1. Survival Risk (Runway)
-  if (data.runway < 3) {
-    risks.push({
-      level: 'CRITICAL',
-      label: 'Insolvency Risk',
-      msg: 'Runway < 3 months. Immediate capital injection or 40% cost cut required.',
-      icon: 'AlertOctagon',
-      action: 'Execute Emergency Burn Reduction Plan'
-    });
-  } else if (data.runway < 6) {
-    risks.push({
-      level: 'WARNING',
-      label: 'Liquidity Stress',
-      msg: 'Runway < 6 months. Begin fundraising or pause non-essential hiring.',
-      icon: 'AlertTriangle',
-      action: 'Open Strategic Funding Round'
-    });
-  }
-
-  // 2. Governance Risk (Dilution)
-  if (data.totalInvestorPct > 45) {
-    risks.push({
-      level: 'CRITICAL',
-      label: 'Loss of Control',
-      msg: 'Investor equity exceeds 45%. Founders may lose board control in the next round.',
-      icon: 'Users',
-      action: 'Review Shareholder Agreement Control Clauses'
-    });
-  }
-
-  // 3. Efficiency Risk (EBITDA)
-  if (data.ebitdaMargin < 10) {
-    risks.push({
-      level: 'ADVISORY',
-      label: 'Margin Compression',
-      msg: 'EBITDA < 10%. Business model lacks operational leverage. Review COGS.',
-      icon: 'TrendingDown',
-      action: 'Conduct Category-Level Cost Rigidity Audit'
-    });
-  }
-
-  // 4. Cash Flow Risk
-  if (data.burnRate > data.netRevenue && data.netRevenue > 0) {
-    risks.push({
-      level: 'WARNING',
-      label: 'Negative Cash Cycle',
-      msg: 'Monthly burn exceeds revenue. Business is not yet self-sustaining.',
-      icon: 'TrendingDown',
-      action: 'Calibrate Revenue Velocity vs OpEx Burn'
-    });
-  }
-
-  return risks;
-};
-
-/**
  * Aggregates monthly expenses by category
  */
 export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
@@ -309,10 +299,36 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
         percentage: 0 
       };
     }
-    acc[categoryId].amount += exp.amount;
+    acc[categoryId].amount += (exp.amount || 0);
     acc[categoryId].percentage = total > 0 ? parseFloat(((acc[categoryId].amount / total) * 100).toFixed(1)) : 0;
     return acc;
   }, {} as Record<string, any>);
 
-  return Object.values(grouped).sort((a, b) => b.amount - a.amount);
+  return Object.values(grouped).sort((a: any, b: any) => b.amount - a.amount);
+};
+
+/**
+ * Groups expenses by type
+ */
+export const groupExpensesByType = (expenses: any[], categories: any[]) => {
+  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
+  return expenses.reduce((acc, exp) => {
+    const type = catMap[exp.categoryId] || "Variable";
+    acc[type] = (acc[type] || 0) + exp.amount;
+    return acc;
+  }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
+};
+
+/**
+ * Calculates variance between actual spend and budget
+ */
+export const calculateBudgetVariance = (actualAmount: number, budgetAmount: number) => {
+  const variance = (actualAmount || 0) - (budgetAmount || 0);
+  const variancePct = budgetAmount > 0 ? (variance / budgetAmount) * 100 : 0;
+
+  return {
+    variance,
+    variancePct: variancePct.toFixed(1),
+    status: variance > 0 ? "OVER" : (variance < 0 && Math.abs(variancePct) > 1) ? "UNDER" : "ON_TRACK"
+  };
 };
