@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore, useUser } from "@/firebase";
+import { useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { 
   Dialog, 
@@ -41,14 +41,15 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
     const description = formData.get("description") as string;
     
     // Extract month YYYY-MM
-    const month = date.substring(0, 7);
+    const monthId = date.substring(0, 7);
 
     try {
       await addDoc(collection(firestore, "expenses"), {
         amount,
         categoryId,
         date,
-        month,
+        month: monthId, // Standardized for logic
+        monthId: monthId, // Redundant but consistent with backend.json
         description,
         createdAt: serverTimestamp(),
       });

@@ -18,7 +18,7 @@ import { AddFinancialsModal } from "@/components/financials/add-financials-modal
 
 const subNavItems = [
   { name: "Operational Performance", href: "/financial/operational", icon: Activity },
-  { name: "Budgeting", href: "/financial/operational#budget", icon: Target },
+  { name: "Budget vs Actual", href: "/financial/operational/budget", icon: Target },
   { name: "Sales Intelligence", href: "/financial/sales", icon: TrendingUp },
   { name: "Cost Categories", href: "/financial/categories", icon: PieChart },
   { name: "Capital & Governance", href: "/financial/capital", icon: ShieldCheck },
@@ -43,7 +43,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
       {/* Sub-Navigation Tabs */}
       <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl w-fit overflow-x-auto no-scrollbar">
         {subNavItems.map((item) => {
-          const isActive = pathname.startsWith(item.href.split('#')[0]) && (item.href.includes('#') ? false : true); // Simple logic for prototype
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}

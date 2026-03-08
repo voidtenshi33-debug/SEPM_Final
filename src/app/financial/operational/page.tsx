@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { 
   calcEBITDA, 
-  calcEBITDAMargin, 
   calculateRunway, 
   formatINR,
   getMonthlyDistribution,
@@ -35,7 +34,8 @@ import {
   CheckCircle2,
   Loader2,
   Target,
-  ShieldAlert
+  ShieldAlert,
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddExpenseModal } from "@/components/financials/add-expense-modal";
@@ -43,6 +43,8 @@ import { SetBudgetModal } from "@/components/financials/set-budget-modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 const CHART_COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
@@ -64,7 +66,7 @@ export default function OperationalPage() {
   const runway = calculateRunway(42000000, opEx); // Mock cash
 
   // Distribution Logic
-  const monthExpenses = expenses?.filter(e => e.month === selectedMonth) || [];
+  const monthExpenses = expenses?.filter(e => (e.monthId === selectedMonth || e.month === selectedMonth)) || [];
   const distributionData = React.useMemo(() => {
     return getMonthlyDistribution(monthExpenses, categories);
   }, [monthExpenses, categories]);
@@ -110,10 +112,10 @@ export default function OperationalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Header with Set Budget & Log Expense */}
+      {/* Header */}
       <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex items-center gap-3">
-          <Target className="h-5 w-5 text-accent" />
+          <Activity className="h-5 w-5 text-accent" />
           <h2 className="text-xl font-bold font-headline">Operational Guard</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -183,102 +185,74 @@ export default function OperationalPage() {
         </Card>
       </div>
 
-      {/* Budget vs Actual Variance Table */}
-      <div id="budget" className="space-y-6 pt-4 scroll-mt-20">
-        <div className="flex items-center gap-2 px-1">
-          <ShieldAlert className="h-5 w-5 text-accent" />
-          <h3 className="text-lg font-bold font-headline">Budget vs. Actual Variance</h3>
-        </div>
-        
-        <Card className="border-none shadow-xl overflow-hidden bg-white">
-          <CardContent className="p-0">
-            {varianceReport.length > 0 ? (
-              <div className="relative overflow-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="text-[10px] uppercase bg-slate-50 text-slate-500 font-bold tracking-widest border-b">
-                    <tr>
-                      <th className="px-6 py-4">Expense Category</th>
-                      <th className="px-6 py-4 text-right">Target vs. Actual (Horizontal Indicator)</th>
-                      <th className="px-6 py-4 text-right">Variance (₹)</th>
-                      <th className="px-6 py-4 text-center">Situation Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {varianceReport.map((row, i) => (
-                      <tr key={i} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900">{row.name}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{row.type}</p>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="space-y-1 max-w-[200px] ml-auto">
-                            <div className="flex justify-between text-[9px] font-bold uppercase">
-                              <span className="text-slate-400">Budget: {formatINR(row.budgetAmount)}</span>
-                              <span className={cn(row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
-                                Actual: {formatINR(row.actualAmount)}
-                              </span>
-                            </div>
-                            <Progress 
-                              value={Math.min((row.actualAmount / (row.budgetAmount || 1)) * 100, 100)} 
-                              className={cn("h-2 rounded-full", row.status === 'OVER' ? 'bg-rose-100 [&>div]:bg-rose-500' : 'bg-slate-100 [&>div]:bg-emerald-500')} 
-                            />
-                          </div>
-                        </td>
-                        <td className={cn("px-6 py-4 text-right font-bold", row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
-                          {row.status === 'OVER' ? '+' : '-'}{formatINR(Math.abs(row.variance))}
-                          <span className="text-[9px] ml-1 opacity-70">({row.variancePct}%)</span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          {row.status === 'OVER' ? (
-                            <Badge className="bg-rose-50 text-rose-700 border-rose-100 uppercase text-[8px] font-bold">Over Budget</Badge>
-                          ) : row.status === 'UNDER' ? (
-                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 uppercase text-[8px] font-bold">Under Budget</Badge>
-                          ) : (
-                            <Badge variant="outline" className="uppercase text-[8px] font-bold">On Track</Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot className="bg-slate-50 font-bold border-t">
-                    <tr>
-                      <td className="px-6 py-4 text-slate-600 uppercase tracking-wider text-[10px]">Total Operational Burn</td>
+      {/* Budget Summary Preview */}
+      <Card className="border-none shadow-xl overflow-hidden bg-white">
+        <CardHeader className="flex flex-row items-center justify-between border-b border-slate-50 bg-slate-50/30">
+          <div className="space-y-1">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <ShieldAlert className="h-5 w-5 text-accent" />
+              Budget vs. Actual Variance
+            </CardTitle>
+            <CardDescription>Situational spend auditing for {selectedMonth}</CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" asChild className="text-accent font-bold group">
+            <Link href="/financial/operational/budget">
+              Detailed Ledger <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          {varianceReport.length > 0 ? (
+            <div className="relative overflow-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-[10px] uppercase bg-slate-50 text-slate-500 font-bold tracking-widest border-b">
+                  <tr>
+                    <th className="px-6 py-4">Category</th>
+                    <th className="px-6 py-4 text-right">Utilization Indicator</th>
+                    <th className="px-6 py-4 text-right">Variance (₹)</th>
+                    <th className="px-6 py-4 text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {varianceReport.slice(0, 5).map((row, i) => (
+                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
-                         <div className="space-y-1 max-w-[200px] ml-auto">
-                            <Progress value={totalProgress} className={cn("h-3 rounded-full", totalProgress > 100 ? "bg-rose-100 [&>div]:bg-rose-600" : "bg-emerald-100 [&>div]:bg-emerald-600")} />
-                         </div>
+                        <p className="font-bold text-slate-900">{row.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">{row.type}</p>
                       </td>
-                      <td className={cn("px-6 py-4 text-right", totalActual > totalBudget ? 'text-rose-600' : 'text-emerald-600')}>
-                        {totalActual > totalBudget ? '+' : '-'}{formatINR(Math.abs(totalActual - totalBudget))}
+                      <td className="px-6 py-4">
+                        <div className="space-y-1 max-w-[180px] ml-auto">
+                          <Progress 
+                            value={Math.min((row.actualAmount / (row.budgetAmount || 1)) * 100, 100)} 
+                            className={cn("h-1.5 rounded-full", row.status === 'OVER' ? 'bg-rose-100 [&>div]:bg-rose-500' : 'bg-slate-100 [&>div]:bg-emerald-500')} 
+                          />
+                        </div>
+                      </td>
+                      <td className={cn("px-6 py-4 text-right font-bold", row.status === 'OVER' ? 'text-rose-600' : 'text-emerald-600')}>
+                        {row.status === 'OVER' ? '+' : '-'}{formatINR(Math.abs(row.variance))}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <Badge variant={totalActual > totalBudget ? 'destructive' : 'default'} className="uppercase text-[8px] font-bold">
-                          {totalActual > totalBudget ? 'Deficit' : 'Surplus'}
+                        <Badge variant="outline" className={cn(
+                          "uppercase text-[8px] font-bold",
+                          row.status === 'OVER' ? "bg-rose-50 text-rose-700 border-rose-100" : row.status === 'UNDER' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : ""
+                        )}>
+                          {row.status === 'OVER' ? 'Over' : row.status === 'UNDER' ? 'Under' : 'Track'}
                         </Badge>
                       </td>
                     </tr>
-                  </tfoot>
-                </table>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center p-20 text-center space-y-4">
-                <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center">
-                  <ShieldAlert className="h-8 w-8 text-slate-200" />
-                </div>
-                <div>
-                  <h4 className="text-lg font-bold text-slate-900">No Budget Plan Recorded</h4>
-                  <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
-                    Establish categorical targets for {selectedMonth} to activate situational variance intelligence.
-                  </p>
-                  <div className="mt-6">
-                    <SetBudgetModal categories={categories} monthId={selectedMonth} />
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+              <ShieldAlert className="h-8 w-8 text-slate-200" />
+              <p className="text-sm text-muted-foreground">Establish categorical targets to activate variance intelligence.</p>
+              <SetBudgetModal categories={categories} monthId={selectedMonth} />
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Visual Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
