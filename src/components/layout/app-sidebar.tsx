@@ -16,7 +16,9 @@ import {
   Activity,
   Tags,
   Zap,
-  Target
+  Target,
+  Calendar,
+  FolderLock
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -36,6 +38,8 @@ import {
 
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
+  { title: "Founder Schedule", icon: Calendar, url: "/schedule" },
+  { title: "Document Vault", icon: FolderLock, url: "/documents" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
 ];
 
@@ -62,7 +66,7 @@ const operationsNavItems = [
 
 const aiNavItems = [
   { title: "Strategic Insights", icon: Zap, url: "/financial/insights" },
-  { title: "AI Growth Engine", icon: BrainCircuit, url: "/ai-insights" },
+  { title: "AI Growth Engine", icon: BrainCircuit, url: "/ai-growth" },
 ];
 
 export function AppSidebar() {

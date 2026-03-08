@@ -33,6 +33,8 @@
         "industry": { "type": "string" },
         "teamSize": { "type": "number" },
         "mission": { "type": "string" },
+        "website": { "type": "string" },
+        "location": { "type": "string" },
         "governancePin": { "type": "string", "description": "A 4-digit secret PIN for sensitive financial operations." }
       }
     },
@@ -137,10 +139,11 @@
         "categoryBudgets": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "categoryId": { "type": "string" },
-              "budgetAmount": { "type": "number" }
+            "object": {
+              "properties": {
+                "categoryId": { "type": "string" },
+                "budgetAmount": { "type": "number" }
+              }
             }
           }
         },
@@ -194,6 +197,31 @@
         "authorId": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "ScheduleBlock": {
+      "title": "ScheduleBlock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "type": { "type": "string", "enum": ["Deep Work", "Meeting", "Routine"] },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["title", "startTime", "endTime", "type", "date"]
+    },
+    "Document": {
+      "title": "Document",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string" },
+        "lastModified": { "type": "string", "format": "date-time" },
+        "isLocked": { "type": "boolean" }
+      },
+      "required": ["name", "type", "lastModified", "isLocked"]
     }
   },
   "auth": {
@@ -211,6 +239,8 @@
     "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." },
     "projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
     "tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
-    "tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." }
+    "tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." },
+    "schedule/{blockId}": { "schema": "ScheduleBlock", "description": "Daily founder schedule blocks." },
+    "documents/{docId}": { "schema": "Document", "description": "Strategic document vault." }
   }
 }
