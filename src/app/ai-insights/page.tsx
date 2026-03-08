@@ -13,7 +13,7 @@ import { useMemoFirebase } from "@/firebase/provider"
 import { getStrategicRecommendations, generateTaskTemplate } from "@/modules/execution/utils/executionEngine"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { calculateRunway } from "@/modules/financial/utils/financialEngine"
+import { calculateRunway, formatINR } from "@/modules/financial/utils/financialEngine"
 
 export default function AIInsightsPage() {
   const [loading, setLoading] = useState(false)
@@ -37,25 +37,38 @@ export default function AIInsightsPage() {
 
   const latestMonth = financials && financials.length > 0 ? financials[0] : null;
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const runway = currentBurn > 0 ? calculateRunway(1000000, currentBurn) : 99;
+  
+  // Real Runway Calc (Using baseline if profile doesn't have it)
+  const currentCash = 1000000; 
+  const runway = currentBurn > 0 ? calculateRunway(currentCash, currentBurn) : 99;
 
   const recommendations = React.useMemo(() => {
     return getStrategicRecommendations(profile, financials || [], runway);
   }, [profile, financials, runway]);
 
+  const executionIndex = React.useMemo(() => {
+    if (!projects || projects.length === 0) return 0;
+    const totalProgress = projects.reduce((acc, p) => {
+      const pTasks = tasks?.filter(t => t.projectId === p.id) || [];
+      const completed = pTasks.filter(t => t.status === 'Completed').length;
+      const prog = pTasks.length > 0 ? (completed / pTasks.length) * 100 : 0;
+      return acc + prog;
+    }, 0);
+    return totalProgress / projects.length;
+  }, [projects, tasks]);
+
   const generateInsights = async () => {
     setLoading(true)
     try {
-      // Real data synthesis for AI prompt
       const data = {
         financialHealthSummary: latestMonth 
           ? `Current monthly revenue is ${formatINR(latestMonth.netRevenue)} with ${formatINR(latestMonth.operatingExpenses)} expenses. Estimated runway is ${runway} months.`
           : "No financial records logged yet.",
         projectProgressSummary: projects && projects.length > 0
-          ? `Executing ${projects.length} strategic projects. ${projects.filter(p => p.status === 'Active').length} are active.`
+          ? `Executing ${projects.length} strategic projects. Execution velocity is ${executionIndex.toFixed(0)}%.`
           : "No strategic initiatives defined.",
         teamCapacitySummary: profile?.teamSize 
-          ? `Leadership team size is ${profile.teamSize}. Tracking individual accountability indexes.`
+          ? `Leadership team size is ${profile.teamSize}. Tracking performance scores.`
           : "Team structure not yet defined in profile."
       }
 
@@ -79,7 +92,7 @@ export default function AIInsightsPage() {
       const batch = writeBatch(db)
 
       batch.set(projectRef, {
-        name: rec.action,
+        name: rec.title,
         description: rec.why,
         type: rec.type,
         status: 'Active',
@@ -105,7 +118,7 @@ export default function AIInsightsPage() {
       await batch.commit()
       toast({
         title: "Initiative Launched",
-        description: `${rec.action} has been added to your Strategy Map.`,
+        description: `${rec.title} has been added to your Strategy Map.`,
       })
     } catch (err) {
       toast({ title: "Action Failed", description: "Could not create project record.", variant: "destructive" })
@@ -236,7 +249,7 @@ export default function AIInsightsPage() {
                       ))}
                     </ul>
                   </CardContent>
-                </div>
+                </Card>
               </div>
               
               <Card className="border-none shadow-lg bg-amber-50/20 border border-amber-100">
@@ -269,9 +282,10 @@ export default function AIInsightsPage() {
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Model Context</p>
                 <p className="text-sm font-bold text-slate-900">{profile?.businessType || 'Hybrid'} Engine</p>
               </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Revenue Data</p>
-                <p className="text-sm font-bold text-slate-900">{latestMonth ? `Synced: ${latestMonth.id}` : 'No Data'}</p>
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Execution Index</p>
+                <Progress value={executionIndex} className="h-1.5" />
+                <p className="text-[9px] text-slate-500 font-medium">Strategic initiatives are {executionIndex.toFixed(0)}% healthy.</p>
               </div>
             </div>
           </Card>
@@ -287,12 +301,4 @@ export default function AIInsightsPage() {
       </div>
     </div>
   )
-}
-
-function formatINR(amount: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(amount);
 }
