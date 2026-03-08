@@ -18,7 +18,7 @@ export const calcEBITDAMargin = (ebitda: number, netRevenue: number): number =>
   (netRevenue && netRevenue > 0) ? (ebitda / netRevenue) * 100 : 0;
 
 /**
- * Calculates remaining deal tenure in years.
+ * Calculates remaining deal tenure in years based on end date.
  */
 export const calcRemainingTenure = (endDate: string): string => {
   if (!endDate) return "0.0";
@@ -43,6 +43,7 @@ export const calcRunway = (cash: number, burn: number): number => {
 
 /**
  * Formats numbers as INR currency using en-IN locale.
+ * Strict enforcement: No "$" symbols, ever.
  */
 export const formatINR = (amount: number): string =>
   new Intl.NumberFormat("en-IN", {
@@ -53,9 +54,14 @@ export const formatINR = (amount: number): string =>
 
 /**
  * Validates Equity Distribution.
- * Ensures the sum of all shareholders does not exceed 100%.
+ * Ensures the sum of Founders, Leadership, Investors, and ESOP does not exceed 100%.
  */
-export function validateEquity(founder: number, leadership: number, investor: number, esop: number): { isValid: boolean; total: number } {
+export function validateEquity(
+  founder: number, 
+  leadership: number, 
+  investor: number, 
+  esop: number
+): { isValid: boolean; total: number } {
   const total = (founder || 0) + (leadership || 0) + (investor || 0) + (esop || 0);
   return {
     isValid: total <= 100.01 && total >= 0,

@@ -17,7 +17,7 @@ import {
   Legend
 } from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Info, AlertTriangle } from "lucide-react";
+import { Info, AlertTriangle, TrendingUp } from "lucide-react";
 
 interface OperationalSectionProps {
   history: any[];
@@ -36,12 +36,15 @@ export function OperationalSection({ history }: OperationalSectionProps) {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-20">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-none shadow-xl">
           <CardHeader>
-            <CardTitle>Revenue vs Expenses (INR)</CardTitle>
-            <CardDescription>Trailing growth performance.</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-accent" />
+              Monthly Sales Performance (INR)
+            </CardTitle>
+            <CardDescription>EBITDA focus vs. Operational Burn.</CardDescription>
           </CardHeader>
           <CardContent className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -61,46 +64,57 @@ export function OperationalSection({ history }: OperationalSectionProps) {
 
         <Card className="border-none shadow-xl bg-slate-50">
           <CardHeader>
-            <CardTitle className="text-lg">Monthly Performance Context</CardTitle>
-            <CardDescription>Operational Efficiency Metrics</CardDescription>
+            <CardTitle className="text-lg">Operational Intelligence</CardTitle>
+            <CardDescription>Sales-based dynamic assessment</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border border-slate-100">
-              <span className="text-sm text-muted-foreground font-medium">Monthly EBITDA</span>
-              <div className="text-right">
-                <div className="text-lg font-bold">{formatINR(ebitda)}</div>
+            <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border border-slate-100">
+              <span className="text-sm text-muted-foreground font-medium uppercase">Net Revenue</span>
+              <div className="text-right font-bold text-xl">
+                {formatINR(latest?.netRevenue || 0)}
               </div>
             </div>
 
-            <div className="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border border-slate-100">
-              <span className="text-sm text-muted-foreground font-medium">EBITDA Margin</span>
+            <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border border-slate-100">
+              <span className="text-sm text-muted-foreground font-medium uppercase">OpEx</span>
+              <div className="text-right font-bold text-xl text-slate-500">
+                {formatINR(latest?.operatingExpenses || 0)}
+              </div>
+            </div>
+
+            <div className={`flex justify-between items-center p-4 rounded-xl shadow-sm border ${
+              ebitda < 0 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100'
+            }`}>
+              <span className="text-sm font-medium uppercase">EBITDA (Monthly)</span>
               <div className="text-right">
-                <div className="text-lg font-bold">{margin.toFixed(1)}%</div>
-                {margin < 15 && (
-                  <Badge variant="destructive" className="text-[10px] h-4 flex items-center gap-1">
-                    <AlertTriangle className="h-2 w-2" />
+                <div className="text-xl font-bold">{formatINR(ebitda)}</div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center p-4 bg-white rounded-xl shadow-sm border border-slate-100">
+              <span className="text-sm text-muted-foreground font-medium uppercase">EBITDA Margin</span>
+              <div className="text-right">
+                <div className="text-xl font-bold">{margin.toFixed(1)}%</div>
+                {margin < 15 && margin > 0 && (
+                  <Badge variant="destructive" className="mt-1 h-5 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />
                     Efficiency Alert
                   </Badge>
                 )}
               </div>
             </div>
 
-            <div className="flex justify-between items-center p-3 bg-white rounded-xl shadow-sm border border-slate-100">
-              <span className="text-sm text-muted-foreground font-medium">Net Revenue</span>
-              <div className="text-right font-bold text-lg">
-                {formatINR(latest?.netRevenue || 0)}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-primary text-primary-foreground space-y-2">
+            <div className="p-5 rounded-xl bg-primary text-primary-foreground space-y-3">
               <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest opacity-70">
-                <Info className="h-3 w-3" />
-                Operational Strategy
+                <Info className="h-4 w-4" />
+                AI Strategy Insight
               </div>
-              <p className="text-xs italic leading-relaxed">
-                {margin < 15 
-                  ? "Operational efficiency needs improvement. High OpEx is suppressing your EBITDA margin."
-                  : "Business model is showing strong operational sustainability with positive unit economics."}
+              <p className="text-sm italic leading-relaxed">
+                {margin < 15 && margin > 0
+                  ? "Operational efficiency needs improvement. Rising operational costs are reducing your profitability potential."
+                  : margin >= 15 
+                  ? "Your business model is becoming sustainable with strong operational efficiency."
+                  : "Caution: Operational burn detected. Focus on increasing Net Revenue or optimizing OpEx to reach sustainability."}
               </p>
             </div>
           </CardContent>
