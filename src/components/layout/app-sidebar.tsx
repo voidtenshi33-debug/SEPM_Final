@@ -35,12 +35,15 @@ import {
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
-  { title: "War Room", icon: Wallet, url: "/financial" },
+];
+
+const teamNavItems = [
+  { title: "Leadership Team", icon: Users, url: "/team" },
 ];
 
 const capitalNavItems = [
+  { title: "War Room", icon: Wallet, url: "/financial" },
   { title: "Cap Table DNA", icon: ShieldCheck, url: "/financial/capital" },
-  { title: "Leadership Team", icon: Users, url: "/financial/capital/leadership" },
   { title: "Funding Rounds", icon: Rocket, url: "/financial/capital/rounds" },
   { title: "Investor Ledger", icon: Briefcase, url: "/financial/capital/investors" },
 ];
@@ -52,7 +55,7 @@ const operationsNavItems = [
 ];
 
 const aiNavItems = [
-  { title: "War Room Insights", icon: Zap, url: "/financial/insights" },
+  { title: "Strategic Insights", icon: Zap, url: "/financial/insights" },
   { title: "AI Growth Engine", icon: BrainCircuit, url: "/ai-insights" },
 ];
 
@@ -90,6 +93,13 @@ export function AppSidebar() {
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavList items={mainNavItems} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Organization</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavList items={teamNavItems} />
           </SidebarGroupContent>
         </SidebarGroup>
         
