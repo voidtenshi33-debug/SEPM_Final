@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useMemo, useEffect, type ReactNode } from 'react';
+import React, { useMemo, type ReactNode } from 'react';
 import { FirebaseProvider } from '@/firebase/provider';
-import { initializeFirebase, initiateAnonymousSignIn } from '@/firebase';
+import { initializeFirebase } from '@/firebase';
 
 interface FirebaseClientProviderProps {
   children: ReactNode;
@@ -14,13 +14,7 @@ export function FirebaseClientProvider({ children }: FirebaseClientProviderProps
     return initializeFirebase();
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  useEffect(() => {
-    // Automatically sign in anonymously to satisfy security rules that require authentication.
-    // This allows the prototype to fetch data immediately while maintaining a secure-by-default posture.
-    if (firebaseServices.auth) {
-      initiateAnonymousSignIn(firebaseServices.auth);
-    }
-  }, [firebaseServices.auth]);
+  // Auto-anonymous sign-in removed to allow user-driven authentication on the landing page.
 
   return (
     <FirebaseProvider

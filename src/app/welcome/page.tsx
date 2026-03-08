@@ -1,11 +1,40 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ShieldCheck, BrainCircuit, Activity, ArrowRight, Target, Sparkles } from "lucide-react"
-import Link from "next/link"
+import { ShieldCheck, BrainCircuit, Activity, ArrowRight, Target, Sparkles, Loader2 } from "lucide-react"
+import { useUser } from "@/firebase"
+import { useRouter } from "next/navigation"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { AuthForm } from "@/components/auth/auth-form"
 
 export default function WelcomePage() {
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (user && !isUserLoading) {
+      setIsRedirecting(true);
+      router.push("/");
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isRedirecting || (user && !isUserLoading)) {
+    return (
+      <div className="min-h-screen bg-[#020617] flex flex-col items-center justify-center text-white space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+        <p className="text-sm font-bold uppercase tracking-widest text-slate-500 animate-pulse">Initializing Command Center...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-hidden flex flex-col items-center justify-center relative p-6">
       {/* Background Visuals */}
@@ -59,11 +88,19 @@ export default function WelcomePage() {
         </div>
 
         <div className="pt-12 space-y-8 animate-in fade-in zoom-in duration-1000 delay-500">
-          <Button size="lg" className="h-16 px-12 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.3)] group border border-blue-400/20" asChild>
-            <Link href="/">
-              Initialize Command Center <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </Link>
-          </Button>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="lg" className="h-16 px-12 text-lg font-bold bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-[0_0_40px_rgba(37,99,235,0.3)] group border border-blue-400/20">
+                Initialize Command Center <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="bg-[#020617] border-white/10 text-white sm:max-w-[450px] p-8 rounded-3xl backdrop-blur-xl">
+              <DialogHeader className="sr-only">
+                <DialogTitle>Founder Portal</DialogTitle>
+              </DialogHeader>
+              <AuthForm />
+            </DialogContent>
+          </Dialog>
           
           <div className="flex items-center justify-center gap-8 text-slate-500">
             <div className="flex items-center gap-2">
@@ -80,7 +117,7 @@ export default function WelcomePage() {
       </div>
 
       <footer className="absolute bottom-8 w-full text-center text-slate-700 text-[10px] font-bold uppercase tracking-[0.4em]">
-        © 2024 UdyamRakshak Global Systems • Tactical Intelligence Division
+        © 2024 StartupOS Global Systems • Tactical Intelligence Division
       </footer>
     </div>
   )
