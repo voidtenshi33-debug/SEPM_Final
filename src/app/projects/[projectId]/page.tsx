@@ -77,7 +77,7 @@ export default function ProjectDetailsPage() {
       createdAt: new Date().toISOString()
     };
 
-    await addDoc(collection(db, 'tasks'), taskData);
+    addDoc(collection(db, 'tasks'), taskData);
     setAssignModalOpen(false);
   };
 
@@ -86,7 +86,7 @@ export default function ProjectDetailsPage() {
     if (!newUpdate || !selectedTask) return;
 
     const updateRef = collection(db, 'tasks', selectedTask, 'weeklyUpdates');
-    await addDoc(updateRef, {
+    addDoc(updateRef, {
       content: newUpdate,
       authorId: user?.email || 'Anonymous',
       createdAt: new Date().toISOString(),
@@ -94,7 +94,7 @@ export default function ProjectDetailsPage() {
     });
 
     const taskRef = doc(db, 'tasks', selectedTask);
-    await updateDoc(taskRef, { lastUpdateAt: new Date().toISOString() });
+    updateDoc(taskRef, { lastUpdateAt: new Date().toISOString() });
 
     setNewUpdate("");
     setSelectedTask(null);
