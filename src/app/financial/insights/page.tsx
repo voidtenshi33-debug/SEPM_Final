@@ -23,10 +23,9 @@ import {
   formatINR, 
   calcEBITDA, 
   calcEBITDAMargin, 
-  calcRunway, 
+  calculateRunway, 
   calculateHealthScore, 
-  generateInsights,
-  type HealthMetrics 
+  generateInsights
 } from "@/modules/financial/utils/financialEngine";
 import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
@@ -48,19 +47,13 @@ export default function FinancialInsightsPage() {
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
   const leadEquity = (leadership || []).reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   
-  // Calculate Growth
-  const salesGrowth = (latestMonth && prevMonth && prevMonth.netRevenue > 0)
-    ? ((latestMonth.netRevenue - prevMonth.netRevenue) / prevMonth.netRevenue) * 100
-    : 0;
-
-  const metrics: HealthMetrics = {
-    runway: calcRunway(168000, burn), // Fixed cash for prototype
+  const metrics = {
+    runway: calculateRunway(168000, burn), // Fixed cash for prototype
     ebitdaMargin: latestMonth ? calcEBITDAMargin(ebitda, latestMonth.netRevenue) : 0,
     burnRate: burn,
     netRevenue: latestMonth?.netRevenue || 0,
     founderEquity: capTable?.founderEquityPct || 0,
-    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0,
-    salesGrowth
+    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0
   };
 
   const healthScore = calculateHealthScore(metrics);
@@ -71,7 +64,7 @@ export default function FinancialInsightsPage() {
     
     // Header
     doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42); // Founder Blue
+    doc.setTextColor(15, 23, 42); 
     doc.text("UdyamRakshak: Executive Financial Brief", 14, 22);
     
     doc.setFontSize(10);
@@ -94,7 +87,7 @@ export default function FinancialInsightsPage() {
         ['Cash Runway', `${metrics.runway.toFixed(1)} Months`],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] } // Startup Electric
+      headStyles: { fillColor: [59, 130, 246] }
     });
 
     // Section 2: Ownership Snapshot
@@ -159,7 +152,6 @@ export default function FinancialInsightsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Health Score Gauge */}
         <Card className="lg:col-span-1 border-none shadow-xl bg-slate-50 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4 opacity-10">
             <ShieldCheck className="h-24 w-24 text-primary" />
@@ -201,7 +193,6 @@ export default function FinancialInsightsPage() {
           </CardDescription>
         </Card>
 
-        {/* Advisory List */}
         <div className="lg:col-span-2 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 px-1">
             <Zap className="h-5 w-5 text-accent" />

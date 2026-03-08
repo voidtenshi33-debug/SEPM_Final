@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from "react";
@@ -8,7 +7,7 @@ import { collection, query, orderBy, limit } from "firebase/firestore";
 import { 
   calcEBITDA, 
   calcEBITDAMargin, 
-  calcRunway, 
+  calculateRunway, 
   formatINR
 } from "@/modules/financial/utils/financialEngine";
 import { 
@@ -71,7 +70,7 @@ export default function OperationalPage() {
   const prevOpEx = prevMonthRecord?.operatingExpenses || 0;
   const prevEbitda = calcEBITDA(prevNetRev, prevOpEx);
 
-  const runway = calcRunway(42000000, opEx); // Mock ₹4.2Cr cash balance
+  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash balance
 
   const chartData = financials?.map(f => ({
     month: f.month,

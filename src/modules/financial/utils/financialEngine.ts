@@ -1,24 +1,82 @@
+'use client';
+
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
- * Ensures consistent math across all financial sub-modules.
+ * Handles EBITDA, Margins, Runway, Burn Rate, and Equity Dilution with INR support.
  */
 
 /**
- * Calculates EBITDA (Monthly).
+ * Calculates monthly EBITDA
+ * EBITDA = Net Revenue - Operating Expenses
  */
 export const calcEBITDA = (netRevenue: number, opEx: number): number => 
   (netRevenue || 0) - (opEx || 0);
 
 /**
- * Calculates EBITDA Margin %.
+ * Calculates EBITDA Margin %
  */
 export const calcEBITDAMargin = (ebitda: number, netRevenue: number): number => 
-  (netRevenue && netRevenue > 0) ? (ebitda / netRevenue) * 100 : 0;
+  netRevenue > 0 ? (ebitda / netRevenue) * 100 : 0;
 
 /**
- * Calculates remaining deal tenure in years.
+ * Estimates runway in months based on current cash and average burn
  */
-export const calcRemainingTenure = (endDate: string): string => {
+export function calculateRunway(currentCash: number, monthlyBurn: number): number {
+  if (monthlyBurn <= 0) return 999;
+  return parseFloat((currentCash / monthlyBurn).toFixed(1));
+}
+
+/**
+ * Calculates Growth Percentage
+ */
+export function calculateGrowth(current: number, previous: number): number {
+  if (previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+}
+
+/**
+ * Formats currency to INR (₹) using en-IN locale
+ */
+export const formatINR = (amount: number | undefined | null): string =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0
+  }).format(amount || 0);
+
+/**
+ * Validates the cap table total equity split
+ */
+export function validateEquity(
+  founderPct: number, 
+  leadershipPct: number, 
+  investorPct: number, 
+  esopPct: number
+): { isValid: boolean; total: number; remaining: number } {
+  const total = (founderPct || 0) + (leadershipPct || 0) + (investorPct || 0) + (esopPct || 0);
+  return { 
+    isValid: total <= 100.01, 
+    total: parseFloat(total.toFixed(2)),
+    remaining: parseFloat((100 - total).toFixed(2))
+  };
+}
+
+/**
+ * Calculates Post-Money Valuation
+ */
+export const calculatePostMoney = (preMoney: number, totalRaised: number): number => 
+  (preMoney || 0) + (totalRaised || 0);
+
+/**
+ * Calculates dilution based on a new round
+ */
+export const calculateDilution = (totalRaised: number, postMoney: number): number =>
+  postMoney > 0 ? (totalRaised / postMoney) * 100 : 0;
+
+/**
+ * Calculates remaining tenure/deal years
+ */
+export const calculateRemainingDealYears = (endDate: string | Date | null): string => {
   if (!endDate) return "0.0";
   try {
     const end = new Date(endDate).getTime();
@@ -32,104 +90,54 @@ export const calcRemainingTenure = (endDate: string): string => {
 };
 
 /**
- * Calculates Vesting Progress %.
+ * Calculates vesting progress percentage
  */
-export const calculateVestingProgress = (startDate: string, years: number): string => {
+export const calculateVestingProgress = (startDate: string | Date, years: number): string => {
   if (!startDate || !years) return "0.0";
   try {
     const start = new Date(startDate).getTime();
     const now = new Date().getTime();
-    const totalMs = years * 365.25 * 24 * 60 * 60 * 1000;
-    const elapsedMs = now - start;
-    const progress = Math.min((elapsedMs / totalMs) * 100, 100);
-    return Math.max(0, progress).toFixed(1);
+    const totalDuration = years * 365.25 * 24 * 60 * 60 * 1000;
+    const elapsed = now - start;
+    
+    if (elapsed <= 0) return "0.0";
+    const progress = (elapsed / totalDuration) * 100;
+    return Math.min(progress, 100).toFixed(1);
   } catch (e) {
     return "0.0";
   }
 };
 
 /**
- * Calculates Runway in months.
+ * Product-specific sales metrics
  */
-export const calcRunway = (cash: number, burn: number): number => {
-  if (burn <= 0) return 99;
-  return (cash || 0) / burn;
-};
-
-/**
- * Formats numbers as INR.
- */
-export const formatINR = (amount: number): string =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0
-  }).format(amount || 0);
-
-/**
- * Validates Equity Distribution.
- */
-export function validateEquity(
-  founder: number, 
-  leadership: number, 
-  investor: number, 
-  esop: number
-): { isValid: boolean; total: number } {
-  const total = (founder || 0) + (leadership || 0) + (investor || 0) + (esop || 0);
-  return {
-    isValid: total <= 100.01 && total >= 0,
-    total: Number(total.toFixed(2))
-  };
-}
-
-/**
- * Expense Distribution logic.
- */
-export const getMonthlyDistribution = (monthlyExpenses: any[], globalCategories: any[]) => {
-  if (!monthlyExpenses || monthlyExpenses.length === 0) return [];
-  const catMap = globalCategories.reduce((acc, cat) => ({ 
-    ...acc, 
-    [cat.id]: { name: cat.name, type: cat.type, color: cat.color || "#94A3B8" } 
-  }), {});
-  const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const grouped = monthlyExpenses.reduce((acc, exp) => {
-    const catId = exp.categoryId;
-    const cat = catMap[catId] || { name: "Uncategorized", type: "Variable", color: "#94A3B8" };
-    if (!acc[catId]) {
-      acc[catId] = { name: cat.name, type: cat.type, color: cat.color, amount: 0, percentage: 0 };
-    }
-    acc[catId].amount += exp.amount;
-    return acc;
-  }, {} as any);
-  return Object.values(grouped).map((item: any) => ({
-    ...item,
-    percentage: total > 0 ? Number(((item.amount / total) * 100).toFixed(1)) : 0
-  })).sort((a: any, b: any) => b.amount - a.amount);
-};
-
 export const calculateProductMetrics = (data: any) => ({
   aov: data.ordersCount > 0 ? (data.netRevenue || 0) / data.ordersCount : 0,
   revenuePerUnit: data.unitsSold > 0 ? (data.netRevenue || 0) / data.unitsSold : 0,
-  dailyOrderAvg: (data.ordersCount || 0) / 30
+  dailyOrderAvg: (data.ordersCount || 0) / 30 
 });
 
-export const calculateServiceMetrics = (data: any, teamSize: number = 1) => ({
+/**
+ * Service-specific sales metrics
+ */
+export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
   revenuePerClient: data.activeClients > 0 ? (data.netRevenue || 0) / data.activeClients : 0,
   utilizationRate: (teamSize > 0) ? ((data.billableHours || 0) / (teamSize * 160)) * 100 : 0,
-  clientRetention: data.activeClients > 0 ? ((data.retainedClients || 0) / data.activeClients) * 100 : 0
+  clientRetention: data.activeClients > 0 
+    ? ((data.retainedClients || 0) / data.activeClients) * 100 
+    : 0
 });
 
-export interface HealthMetrics {
-  runway: number;
-  ebitdaMargin: number;
-  burnRate: number;
-  netRevenue: number;
-  founderEquity: number;
-  totalInvestorEquity: number;
-  salesGrowth?: number;
-}
-
-export const calculateHealthScore = (data: HealthMetrics): number => {
+/**
+ * Calculates Health Score
+ */
+export const calculateHealthScore = (data: { 
+  runway: number; 
+  ebitdaMargin: number; 
+  burnRate: number; 
+  netRevenue: number; 
+  founderEquity: number 
+}): number => {
   let score = 100;
   if (data.runway < 6) score -= 30;
   if (data.ebitdaMargin < 15) score -= 20;
@@ -138,23 +146,84 @@ export const calculateHealthScore = (data: HealthMetrics): number => {
   return Math.max(score, 0);
 };
 
-export interface StrategicInsight {
-  level: 'CRITICAL' | 'WARNING' | 'ADVISORY';
-  msg: string;
-  type: 'survival' | 'efficiency' | 'equity' | 'growth';
-  icon?: string;
-}
-
-export const generateInsights = (data: HealthMetrics): StrategicInsight[] => {
-  const reports: StrategicInsight[] = [];
+/**
+ * Generates actionable strategic insights
+ */
+export const generateInsights = (data: { 
+  runway: number; 
+  ebitdaMargin: number; 
+  totalInvestorEquity: number 
+}) => {
+  const reports = [];
   if (data.runway < 6) {
-    reports.push({ level: 'CRITICAL', msg: "Runway critical (< 6 months). Immediate cost optimization required.", type: 'survival', icon: 'ShieldAlert' });
+    reports.push({ 
+      level: 'CRITICAL', 
+      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
+      type: 'survival',
+      icon: 'ShieldAlert'
+    });
   }
   if (data.ebitdaMargin < 15) {
-    reports.push({ level: 'WARNING', msg: "EBITDA margin below benchmark (15%). Review variable operating expenses.", type: 'efficiency', icon: 'Activity' });
+    reports.push({ 
+      level: 'WARNING', 
+      msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
+      type: 'efficiency',
+      icon: 'Activity'
+    });
   }
-  if (data.founderEquity < 50) {
-    reports.push({ level: 'ADVISORY', msg: "Founder equity is dropping. Consider debt-financing to maintain control.", type: 'equity', icon: 'Users' });
+  if (data.totalInvestorEquity > 30) {
+    reports.push({ 
+      level: 'ADVISORY', 
+      msg: "High external dilution. Focus on hitting milestones before next round.", 
+      type: 'equity',
+      icon: 'Users'
+    });
   }
   return reports;
+};
+
+/**
+ * Aggregates monthly expenses by category
+ */
+export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
+  if (!monthlyExpenses || monthlyExpenses.length === 0 || !globalCategories) return [];
+  
+  const catMap = globalCategories.reduce((acc, cat) => ({ 
+    ...acc, 
+    [cat.id]: { name: cat.name, type: cat.type, color: cat.color || "#3B82F6" } 
+  }), {} as Record<string, { name: string, type: string, color: string }>);
+  
+  const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  
+  const grouped = monthlyExpenses.reduce((acc, exp) => {
+    const categoryId = exp.categoryId;
+    const cat = catMap[categoryId] || { name: "Other", type: "Variable", color: "#94A3B8" };
+    if (!acc[categoryId]) {
+      acc[categoryId] = { 
+        id: categoryId, 
+        name: cat.name, 
+        type: cat.type, 
+        color: cat.color,
+        amount: 0, 
+        percentage: 0 
+      };
+    }
+    acc[categoryId].amount += exp.amount;
+    acc[categoryId].percentage = total > 0 ? parseFloat(((acc[categoryId].amount / total) * 100).toFixed(1)) : 0;
+    return acc;
+  }, {} as Record<string, any>);
+  
+  return Object.values(grouped).sort((a, b) => b.amount - a.amount);
+};
+
+/**
+ * Groups expenses by type
+ */
+export const groupExpensesByType = (expenses: any[], categories: any[]) => {
+  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
+  return expenses.reduce((acc, exp) => {
+    const type = catMap[exp.categoryId] || "Variable";
+    acc[type] = (acc[type] || 0) + exp.amount;
+    return acc;
+  }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };

@@ -4,8 +4,13 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
-import { validateCapTable, calculateRemainingDealYears } from "@/modules/financial/utils/capitalEngine";
-import { formatINR, calcEBITDA } from "@/modules/financial/utils/financialEngine";
+import { 
+  validateEquity, 
+  formatINR, 
+  calculateRemainingDealYears, 
+  calculateVestingProgress,
+  calcEBITDA
+} from "@/modules/financial/utils/financialEngine";
 import { 
   PieChart, 
   Pie, 
@@ -53,18 +58,18 @@ export default function CapitalPage() {
   const totalInvestorEquity = investors?.reduce((sum, inv) => sum + (inv.equityPct || 0), 0) || 0;
   
   const capData = [
-    { name: 'Founders', value: capTable?.founderPct || 0 },
+    { name: 'Founders', value: capTable?.founderEquityPct || 0 },
     { name: 'Leadership', value: totalLeadershipEquity },
     { name: 'Investors', value: totalInvestorEquity },
-    { name: 'ESOP Pool', value: capTable?.esopPct || 0 },
+    { name: 'ESOP Pool', value: capTable?.esopEquityPct || 0 },
   ].filter(d => d.value > 0);
 
-  const { isValid: isValidCap, total } = validateCapTable({
-    Founders: capTable?.founderPct || 0,
-    Leadership: totalLeadershipEquity,
-    Investors: totalInvestorEquity,
-    ESOP: capTable?.esopPct || 0
-  });
+  const { isValid: isValidCap, total } = validateEquity(
+    capTable?.founderEquityPct || 0,
+    totalLeadershipEquity,
+    totalInvestorEquity,
+    capTable?.esopEquityPct || 0
+  );
 
   const handleExportInvestorReport = () => {
     const doc = new jsPDF();
@@ -96,10 +101,10 @@ export default function CapitalPage() {
       startY: (doc as any).lastAutoTable.finalY + 15,
       head: [['Stakeholder', 'Role/Type', 'Equity %']],
       body: [
-        ['Founders', 'Core Identity', `${capTable?.founderPct || 0}%`],
+        ['Founders', 'Core Identity', `${capTable?.founderEquityPct || 0}%`],
         ['Leadership', 'Team Allocation', `${totalLeadershipEquity}%`],
         ['Investors', 'Total Participation', `${totalInvestorEquity}%`],
-        ['ESOP Pool', 'Employee Option Pool', `${capTable?.esopPct || 0}%`],
+        ['ESOP Pool', 'Employee Option Pool', `${capTable?.esopEquityPct || 0}%`],
       ],
     });
 

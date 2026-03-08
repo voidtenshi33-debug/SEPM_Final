@@ -4,12 +4,12 @@ import * as React from "react";
 import { useFirestore, useCollection, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Plus, Mail, Linkedin, Clock, Loader2, Copy, Check, ShieldCheck } from "lucide-react";
 import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
-import { calculateVestingProgress } from "@/modules/financial/utils/capitalEngine";
+import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,7 +22,6 @@ export default function TeamPage() {
   const { data: team, isLoading } = useCollection(teamQuery);
 
   const handleCopyLink = (id: string) => {
-    // In a real app, this would be a full URL to the acceptance page
     const url = `${window.location.origin}/accept-invite/${id}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
