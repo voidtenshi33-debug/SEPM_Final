@@ -1,12 +1,14 @@
+
 'use client';
 
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { MetricCards } from "@/components/financials/metric-cards";
 import { OperationalSection } from "@/components/financials/operational-section";
+import { AddExpenseModal } from "@/components/financials/add-expense-modal";
 import { Loader2 } from "lucide-react";
 
 export default function OperationalPage() {
-  const { financials, latestMonth, prevMonth, isLoading } = useFinancials();
+  const { financials, latestMonth, prevMonth, categories, isLoading } = useFinancials();
 
   if (isLoading) {
     return (
@@ -18,6 +20,9 @@ export default function OperationalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex justify-end">
+        <AddExpenseModal categories={categories} />
+      </div>
       <MetricCards 
         currentFinancials={latestMonth} 
         prevFinancials={prevMonth} 

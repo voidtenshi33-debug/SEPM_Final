@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "StartupProfile": {
@@ -28,6 +29,32 @@
         "oneTimeRevenue": { "type": "number" }
       },
       "required": ["id", "month", "netRevenue", "operatingExpenses"]
+    },
+    "ExpenseCategory": {
+      "title": "ExpenseCategory",
+      "type": "object",
+      "description": "Defines an expense category type and classification.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Fixed", "Variable", "R&D"] },
+        "color": { "type": "string", "description": "Hex color for UI representation" }
+      },
+      "required": ["id", "name", "type"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "type": "object",
+      "description": "An individual expense record linked to a category.",
+      "properties": {
+        "id": { "type": "string" },
+        "amount": { "type": "number" },
+        "categoryId": { "type": "string" },
+        "month": { "type": "string", "description": "Format: YYYY-MM" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date" }
+      },
+      "required": ["id", "amount", "categoryId", "month"]
     },
     "LeadershipMember": {
       "title": "LeadershipMember",
@@ -105,6 +132,14 @@
     "financials": {
       "schema": "#/backend/entities/Financials",
       "description": "Monthly financial records."
+    },
+    "expenseCategories": {
+      "schema": "#/backend/entities/ExpenseCategory",
+      "description": "Defined expense categories."
+    },
+    "expenses": {
+      "schema": "#/backend/entities/Expense",
+      "description": "Individual expense records."
     },
     "rounds": {
       "schema": "#/backend/entities/Round",
