@@ -1,558 +1,122 @@
 {
   "entities": {
     "StartupProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "StartupProfile",
       "type": "object",
       "description": "Represents the core information and operational details of the startup.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the StartupProfile entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The official registered name of the startup."
-        },
-        "industry": {
-          "type": "string",
-          "description": "The industry sector in which the startup operates."
-        },
-        "stage": {
-          "type": "string",
-          "description": "The current development or funding stage of the startup (e.g., Seed, Series A, Growth)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the startup profile was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the startup profile was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "industry": { "type": "string" },
+        "stage": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "industry",
-        "stage",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "industry", "stage"]
     },
     "Financials": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Financials",
       "type": "object",
-      "description": "Stores monthly financial data and key performance indicators for a startup.",
+      "description": "Stores monthly financial data and key performance indicators.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the monthly financial record (e.g., 'YYYY-MM')."
-        },
-        "month": {
-          "type": "string",
-          "description": "The specific month for which the financial data is recorded (e.g., '2023-10')."
-        },
-        "revenueGross": {
-          "type": "number",
-          "description": "Total gross revenue before any discounts or deductions for the month."
-        },
-        "revenueDiscounts": {
-          "type": "number",
-          "description": "Total value of discounts applied to sales for the month."
-        },
-        "revenueNet": {
-          "type": "number",
-          "description": "Net revenue after applying discounts for the month (Gross Revenue - Discounts)."
-        },
-        "operatingExpenses": {
-          "type": "number",
-          "description": "Total operating expenses incurred during the month, excluding COGS, interest, tax, depreciation, and amortization."
-        },
-        "cogs": {
-          "type": "number",
-          "description": "Cost of Goods Sold for the month."
-        },
-        "unitsSold": {
-          "type": "number",
-          "description": "Total number of units or services sold during the month."
-        },
-        "recurringRevenue": {
-          "type": "number",
-          "description": "Revenue generated from subscriptions or recurring services for the month."
-        },
-        "oneTimeRevenue": {
-          "type": "number",
-          "description": "Revenue generated from one-time sales or services for the month."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this financial record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this financial record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "month": { "type": "string", "description": "Format: YYYY-MM" },
+        "netRevenue": { "type": "number" },
+        "operatingExpenses": { "type": "number" },
+        "cogs": { "type": "number" },
+        "unitsSold": { "type": "number" },
+        "recurringRevenue": { "type": "number" },
+        "oneTimeRevenue": { "type": "number" }
       },
-      "required": [
-        "id",
-        "month",
-        "revenueGross",
-        "revenueDiscounts",
-        "revenueNet",
-        "operatingExpenses",
-        "cogs",
-        "unitsSold",
-        "recurringRevenue",
-        "oneTimeRevenue",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "month", "netRevenue", "operatingExpenses"]
+    },
+    "LeadershipMember": {
+      "title": "LeadershipMember",
+      "type": "object",
+      "description": "Represents a member of the startup's leadership team with equity holdings.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "title": { "type": "string", "description": "e.g., CEO, CTO, CFO" },
+        "responsibility": { "type": "string" },
+        "equityPct": { "type": "number" },
+        "vestingYears": { "type": "number" },
+        "vestingStartDate": { "type": "string", "format": "date" },
+        "vestingEndDate": { "type": "string", "format": "date" },
+        "inviteStatus": { "type": "string", "enum": ["Pending", "Accepted"] }
+      },
+      "required": ["id", "name", "title", "equityPct"]
     },
     "Round": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Round",
       "type": "object",
-      "description": "Manages details for each funding round conducted by the startup.",
+      "description": "Manages details for each funding round.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the funding round entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the funding round (e.g., 'Seed', 'Series A', 'Bridge')."
-        },
-        "preMoneyValuation": {
-          "type": "number",
-          "description": "The valuation of the company before the current funding round investment."
-        },
-        "postMoneyValuation": {
-          "type": "number",
-          "description": "The valuation of the company after the current funding round investment."
-        },
-        "amountRaised": {
-          "type": "number",
-          "description": "The total monetary amount raised in this funding round."
-        },
-        "equityDilutedPct": {
-          "type": "number",
-          "description": "The percentage of equity diluted from existing shareholders for this round."
-        },
-        "roundDate": {
-          "type": "string",
-          "description": "The date when the funding round was closed.",
-          "format": "date-time"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this funding round record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this funding round record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "preMoneyValuation": { "type": "number" },
+        "postMoneyValuation": { "type": "number" },
+        "amountRaised": { "type": "number" },
+        "equityDilutedPct": { "type": "number" },
+        "roundDate": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "name",
-        "preMoneyValuation",
-        "postMoneyValuation",
-        "amountRaised",
-        "equityDilutedPct",
-        "roundDate",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "name", "amountRaised", "equityDilutedPct"]
     },
     "Investor": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Investor",
       "type": "object",
-      "description": "Contains details about individual investors and their participation in funding rounds.",
+      "description": "Contains details about individual investors.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the investor entity."
-        },
-        "roundId": {
-          "type": "string",
-          "description": "Reference to the funding round this investor participated in. (Relationship: Round 1:N Investor)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The full name of the investor."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the investor.",
-          "format": "email"
-        },
-        "investmentAmount": {
-          "type": "number",
-          "description": "The monetary amount invested by this investor in the specific round."
-        },
-        "equityPct": {
-          "type": "number",
-          "description": "The percentage of equity acquired by this investor from the round's diluted pool."
-        },
-        "tenureYears": {
-          "type": "number",
-          "description": "The expected tenure of the investment in years."
-        },
-        "lockInPeriodYears": {
-          "type": "number",
-          "description": "The period in years during which the investor's equity cannot be sold."
-        },
-        "loyaltyStatus": {
-          "type": "boolean",
-          "description": "Indicates if the investor is considered a loyal or strategic partner (Yes/No)."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when this investor record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when this investor record was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "roundId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "investmentAmount": { "type": "number" },
+        "equityPct": { "type": "number" },
+        "tenureYears": { "type": "number" },
+        "dealStartDate": { "type": "string", "format": "date" },
+        "dealEndDate": { "type": "string", "format": "date" },
+        "loyalty": { "type": "boolean" }
       },
-      "required": [
-        "id",
-        "roundId",
-        "name",
-        "email",
-        "investmentAmount",
-        "equityPct",
-        "tenureYears",
-        "lockInPeriodYears",
-        "loyaltyStatus",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "roundId", "name", "equityPct"]
     },
     "CapitalStructure": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CapitalStructure",
       "type": "object",
-      "description": "A singleton entity to store the overall equity distribution and ownership percentages of the startup.",
+      "description": "Singleton entity for aggregated equity distribution.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the capital structure entity (expected to be a singleton, e.g., 'main')."
-        },
-        "founderEquityPct": {
-          "type": "number",
-          "description": "The combined percentage of equity held by all founders."
-        },
-        "ceoEquityPct": {
-          "type": "number",
-          "description": "The percentage of equity held by the CEO."
-        },
-        "esopEquityPct": {
-          "type": "number",
-          "description": "The percentage of equity reserved or allocated for the Employee Stock Option Pool (ESOP)."
-        },
-        "totalInvestorEquityPct": {
-          "type": "number",
-          "description": "The combined total percentage of equity held by all investors."
-        },
-        "lastUpdated": {
-          "type": "string",
-          "description": "Timestamp when the capital structure was last updated.",
-          "format": "date-time"
-        }
+        "id": { "type": "string" },
+        "founderEquityPct": { "type": "number" },
+        "esopEquityPct": { "type": "number" },
+        "totalInvestorEquityPct": { "type": "number" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
       },
-      "required": [
-        "id",
-        "founderEquityPct",
-        "ceoEquityPct",
-        "esopEquityPct",
-        "totalInvestorEquityPct",
-        "lastUpdated"
-      ]
-    },
-    "TeamMember": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "TeamMember",
-      "type": "object",
-      "description": "Represents an individual team member within the startup.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the team member entity."
-        },
-        "firstName": {
-          "type": "string",
-          "description": "The first name of the team member."
-        },
-        "lastName": {
-          "type": "string",
-          "description": "The last name of the team member."
-        },
-        "email": {
-          "type": "string",
-          "description": "The email address of the team member.",
-          "format": "email"
-        },
-        "role": {
-          "type": "string",
-          "description": "The primary role or position of the team member within the company."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The date when the team member started their employment.",
-          "format": "date-time"
-        },
-        "isActive": {
-          "type": "boolean",
-          "description": "A boolean indicating if the team member is currently active."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the team member record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the team member record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "firstName",
-        "lastName",
-        "email",
-        "role",
-        "startDate",
-        "isActive",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Project": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Project",
-      "type": "object",
-      "description": "Defines a specific project within the startup, including its details and assigned team.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the project entity."
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the project."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the project's scope and goals."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the project (e.g., 'Planning', 'In Progress', 'Completed', 'On Hold')."
-        },
-        "startDate": {
-          "type": "string",
-          "description": "The planned start date of the project.",
-          "format": "date-time"
-        },
-        "endDate": {
-          "type": "string",
-          "description": "The planned end date of the project.",
-          "format": "date-time"
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "Reference to the TeamMember who is the primary owner or manager of this project. (Relationship: TeamMember 1:N Project)"
-        },
-        "teamMemberIds": {
-          "type": "array",
-          "description": "References to TeamMembers assigned to this project. (Relationship: TeamMember N:N Project)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the project record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the project record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "name",
-        "description",
-        "status",
-        "startDate",
-        "ownerId",
-        "createdAt",
-        "updatedAt"
-      ]
-    },
-    "Task": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Task",
-      "type": "object",
-      "description": "Represents an individual task that belongs to a specific project.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the task entity."
-        },
-        "projectId": {
-          "type": "string",
-          "description": "Reference to the Project this task belongs to. (Relationship: Project 1:N Task)"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name or title of the task."
-        },
-        "description": {
-          "type": "string",
-          "description": "A detailed description of the task."
-        },
-        "status": {
-          "type": "string",
-          "description": "The current status of the task (e.g., 'To Do', 'In Progress', 'Done', 'Blocked')."
-        },
-        "dueDate": {
-          "type": "string",
-          "description": "The planned due date for the task.",
-          "format": "date-time"
-        },
-        "assignedToId": {
-          "type": "string",
-          "description": "Reference to the TeamMember assigned to complete this task. (Relationship: TeamMember 1:N Task)"
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "Timestamp when the task record was created.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "Timestamp when the task record was last updated.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "projectId",
-        "name",
-        "description",
-        "status",
-        "dueDate",
-        "assignedToId",
-        "createdAt",
-        "updatedAt"
-      ]
+      "required": ["id", "founderEquityPct", "esopEquityPct", "totalInvestorEquityPct"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password", "anonymous"]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/startups/{startupId}",
-        "definition": {
-          "entityName": "StartupProfile",
-          "schema": {
-            "$ref": "#/backend/entities/StartupProfile"
-          },
-          "description": "Stores core information for each startup using the platform. Each document represents a unique startup. This path serves as the primary identifier for all startup-specific data, providing authorization context. Access is controlled by checking if request.auth.uid is a member or owner of this startupId, which is available directly from the path parameter.",
-          "params": [
-            {
-              "name": "startupId",
-              "description": "The unique identifier for the startup, which also serves as the document ID for its StartupProfile."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/financials/{monthId}",
-        "definition": {
-          "entityName": "Financials",
-          "schema": {
-            "$ref": "#/backend/entities/Financials"
-          },
-          "description": "Contains monthly financial performance data. Each document includes a denormalized 'startupId' field to explicitly link it to the owning startup. This achieves Authorization Independence, allowing security rules to authorize access based on the 'startupId' directly within the document, supporting QAPs for efficient and secure list operations. The 'monthId' typically follows a YYYY-MM format.",
-          "params": [
-            {
-              "name": "monthId",
-              "description": "The unique identifier for the monthly financial record, typically in YYYY-MM format, matching the 'id' field of the Financials entity."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/rounds/{roundId}",
-        "definition": {
-          "entityName": "Round",
-          "schema": {
-            "$ref": "#/backend/entities/Round"
-          },
-          "description": "Manages details of each funding round for a startup. Each document includes a denormalized 'startupId' field for Authorization Independence, explicitly linking it to its parent startup. This enables rules to authorize access based on the 'startupId' directly, simplifying security logic and supporting QAPs.",
-          "params": [
-            {
-              "name": "roundId",
-              "description": "The unique identifier for a specific funding round."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/investors/{investorId}",
-        "definition": {
-          "entityName": "Investor",
-          "schema": {
-            "$ref": "#/backend/entities/Investor"
-          },
-          "description": "Stores details about individual investors who participated in funding rounds. Each investor document includes both a 'startupId' and 'roundId' (denormalized) for Authorization Independence. The 'startupId' links it to the owning startup, and 'roundId' links it to the specific funding round, facilitating clear security rules without complex hierarchical lookups.",
-          "params": [
-            {
-              "name": "investorId",
-              "description": "The unique identifier for a specific investor."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/capitalStructure/{startupId}",
-        "definition": {
-          "entityName": "CapitalStructure",
-          "schema": {
-            "$ref": "#/backend/entities/CapitalStructure"
-          },
-          "description": "A singleton document per startup, holding the aggregated equity distribution (founder, CEO, ESOP, total investor percentages). The 'startupId' serves as the document ID, acting as the primary key for Authorization Independence. This structure ensures efficient, single-document reads for the cap table and simplified security rules for this critical financial overview.",
-          "params": [
-            {
-              "name": "startupId",
-              "description": "The unique identifier of the startup, also serving as the document ID for its CapitalStructure singleton."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure for UdyamRakshak's Financial Module is designed to be multi-tenant, secure, and highly efficient, adhering strictly to the core design principles and strategy mandates. The overarching strategy is a **Hybrid Flat-Denormalized Model** where core module collections (`financials`, `rounds`, `investors`) are top-level but each document within them explicitly includes a `startupId` field. This ensures robust **Authorization Independence** and facilitates **Queryable Authorization Policies (QAPs)** without relying on inefficient hierarchical `get()` calls in security rules.\n\n**Authorization Independence via Denormalization (Mandate A):**\nInstead of nesting all financial data under a `startups/{startupId}` subcollection, which the user's blueprint explicitly did not show for `financials`, `rounds`, and `investors`, these collections remain at the root level. To prevent authorization dependencies, every document within `/financials`, `/rounds`, and `/investors` collections **MUST** contain a `startupId` field. This `startupId` directly links the document to the owning startup's `StartupProfile` located at `/startups/{startupId}`. Firestore security rules can then check `request.auth.uid` against membership information stored per `startupId` (e.g., in a dedicated `startupMembers` subcollection or a `members` map on the `StartupProfile` document), ensuring that access to any financial record or capital event is tied directly to the authorized user's `startupId` without traversing parent documents. This enables atomic operations and simplifies debugging.\n\n**QAPs (Rules are not Filters) & Structural Segregation (Mandate B):**\nBy denormalizing the `startupId` into each document, `list` operations become inherently secure and efficient. A client can perform a query like `db.collection('financials').where('startupId', '==', userStartupId)` and the security rules can validate that `request.auth.uid` is authorized for `userStartupId`. This prevents unauthorized data from ever leaving the server, adhering to QAPs. Each collection (e.g., `/financials`) maintains a homogeneous security posture, as all documents within it belong to *some* startup and share similar access patterns, simplifying rule logic.\n\n**Capital Structure as a Singleton (Mandate C):**\nThe `capitalStructure` entity is implemented as a singleton per startup, located at `/capitalStructure/{startupId}`. The document ID for this collection is the `startupId` itself. This design allows for a single, efficient read to fetch the entire cap table summary for a given startup. Its data is implicitly denormalized from the `Rounds` and `Investors` collections, ensuring that aggregated equity percentages are readily available without complex, real-time calculations on every read. This also simplifies security, as rules can directly check authorization for the specific `startupId` document.\n\n**Dynamic Metrics (Data Clarity and Predictability - Mandate D):**\nMetrics like EBITDA and EBITDA Margin % are explicitly designed to be calculated dynamically from fields present in the `Financials` entity (`revenueNet`, `operatingExpenses`). This avoids data duplication and ensures data integrity, as these derived metrics are always current based on the foundational financial inputs. The schemas are predictable, and wildcards (e.g., `{startupId}`, `{monthId}`) are descriptive, enhancing debuggability and maintainability."
+    "leadership": {
+      "schema": "#/backend/entities/LeadershipMember",
+      "description": "Collection of leadership members for the startup."
+    },
+    "financials": {
+      "schema": "#/backend/entities/Financials",
+      "description": "Monthly financial records."
+    },
+    "rounds": {
+      "schema": "#/backend/entities/Round",
+      "description": "Funding rounds."
+    },
+    "investors": {
+      "schema": "#/backend/entities/Investor",
+      "description": "Investor participation."
+    },
+    "capitalStructure": {
+      "schema": "#/backend/entities/CapitalStructure",
+      "description": "Aggregated cap table singleton."
+    }
   }
 }

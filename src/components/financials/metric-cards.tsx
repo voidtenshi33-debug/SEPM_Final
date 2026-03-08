@@ -1,23 +1,21 @@
 "use client";
 
 import { KPICard } from "@/components/dashboard/kpi-card";
-import { TrendingDown, Activity, DollarSign, Zap } from "lucide-react";
-import { FinancialRecord, calculateEBITDA, calculateRunway } from "@/lib/fin-engine";
+import { TrendingDown, Activity, Wallet, Zap } from "lucide-react";
+import { calcEBITDA, calcRunway, formatINR } from "@/modules/financial/utils/financialEngine";
 
 interface MetricCardsProps {
-  currentFinancials: FinancialRecord | null;
-  prevFinancials: FinancialRecord | null;
+  currentFinancials: any | null;
+  prevFinancials: any | null;
   currentCash: number;
 }
 
 export function MetricCards({ currentFinancials, prevFinancials, currentCash }: MetricCardsProps) {
-  const ebitda = currentFinancials ? calculateEBITDA(currentFinancials) : 0;
-  const prevEbitda = prevFinancials ? calculateEBITDA(prevFinancials) : 0;
+  const ebitda = currentFinancials ? calcEBITDA(currentFinancials.netRevenue, currentFinancials.operatingExpenses) : 0;
+  const prevEbitda = prevFinancials ? calcEBITDA(prevFinancials.netRevenue, prevFinancials.operatingExpenses) : 0;
   
-  const burnRate = currentFinancials ? currentFinancials.operatingExpenses - currentFinancials.revenueNet : 0;
-  const actualBurn = burnRate > 0 ? burnRate : 0;
-  
-  const runway = calculateRunway(currentCash, actualBurn);
+  const burnRate = currentFinancials ? Math.max(0, currentFinancials.operatingExpenses - currentFinancials.netRevenue) : 0;
+  const runway = calcRunway(currentCash, burnRate);
 
   const ebitdaTrend = ebitda >= prevEbitda;
   const ebitdaDiff = prevEbitda !== 0 ? ((ebitda - prevEbitda) / Math.abs(prevEbitda) * 100).toFixed(1) : "0";
@@ -26,7 +24,7 @@ export function MetricCards({ currentFinancials, prevFinancials, currentCash }: 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <KPICard 
         title="Monthly EBITDA" 
-        value={`$${ebitda.toLocaleString()}`} 
+        value={formatINR(ebitda)} 
         icon={Zap} 
         description={ebitda >= 0 ? "Operationally Profitable" : "Operating at Loss"}
         trend={{ value: `${Math.abs(Number(ebitdaDiff))}%`, positive: ebitdaTrend }}
@@ -34,7 +32,7 @@ export function MetricCards({ currentFinancials, prevFinancials, currentCash }: 
       />
       <KPICard 
         title="Monthly Burn" 
-        value={`$${actualBurn.toLocaleString()}`} 
+        value={formatINR(burnRate)} 
         icon={TrendingDown} 
         description="Net cash outflow"
       />
@@ -47,8 +45,8 @@ export function MetricCards({ currentFinancials, prevFinancials, currentCash }: 
       />
       <KPICard 
         title="Available Cash" 
-        value={`$${currentCash.toLocaleString()}`} 
-        icon={DollarSign} 
+        value={formatINR(currentCash)} 
+        icon={Wallet} 
         description="Primary operations account"
       />
     </div>

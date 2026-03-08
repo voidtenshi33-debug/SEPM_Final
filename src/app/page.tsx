@@ -1,4 +1,3 @@
-
 "use client";
 
 import { KPICard } from "@/components/dashboard/kpi-card";
@@ -14,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { formatINR } from "@/modules/financial/utils/financialEngine";
 
 export default function DashboardHome() {
   return (
@@ -45,10 +45,10 @@ export default function DashboardHome() {
           description="3 nearing completion"
         />
         <KPICard 
-          title="MRR" 
-          value="$24,500" 
+          title="MRR (INR)" 
+          value={formatINR(245000)} 
           icon={TrendingUp} 
-          description="Next target: $30k"
+          description="Next target: ₹3L"
           trend={{ value: "12%", positive: true }}
         />
       </div>
