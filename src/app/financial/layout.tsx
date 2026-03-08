@@ -10,7 +10,8 @@ import {
   Tags, 
   ShieldCheck, 
   Wallet,
-  LayoutDashboard
+  LayoutDashboard,
+  Zap
 } from "lucide-react";
 
 const subNavItems = [
@@ -19,6 +20,7 @@ const subNavItems = [
   { title: "Sales Intelligence", icon: TrendingUp, href: "/financial/sales" },
   { title: "Categories", icon: Tags, href: "/financial/categories" },
   { title: "Capital & Governance", icon: ShieldCheck, href: "/financial/capital" },
+  { title: "Strategic Insights", icon: Zap, href: "/financial/insights" },
 ];
 
 export default function FinancialLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +38,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
         </div>
       </div>
 
-      <nav className="flex items-center gap-1 p-1 bg-slate-100/50 rounded-xl w-fit">
+      <nav className="flex items-center gap-1 p-1 bg-slate-100/50 rounded-xl w-fit flex-wrap">
         {subNavItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -44,7 +46,7 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap",
                 isActive 
                   ? "bg-white text-accent shadow-sm" 
                   : "text-muted-foreground hover:text-foreground hover:bg-white/50"

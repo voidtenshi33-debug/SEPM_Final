@@ -68,3 +68,65 @@ export function validateEquity(
     total: Number(total.toFixed(2))
   };
 }
+
+/**
+ * NEW: Intelligence Layer Extensions
+ */
+
+export interface HealthMetrics {
+  runway: number;
+  ebitdaMargin: number;
+  burnRate: number;
+  netRevenue: number;
+  founderEquity: number;
+  totalInvestorEquity: number;
+}
+
+export const calculateHealthScore = (data: HealthMetrics): number => {
+  let score = 100;
+  // Deductions based on "Rakshak" (Protector) logic
+  if (data.runway < 6) score -= 30;
+  if (data.ebitdaMargin < 15) score -= 20;
+  if (data.burnRate > data.netRevenue) score -= 15;
+  if (data.founderEquity < 51) score -= 10;
+  return Math.max(score, 0);
+};
+
+export interface StrategicInsight {
+  level: 'CRITICAL' | 'WARNING' | 'ADVISORY';
+  msg: string;
+  type: 'survival' | 'efficiency' | 'equity';
+}
+
+export const generateInsights = (data: HealthMetrics): StrategicInsight[] => {
+  const reports: StrategicInsight[] = [];
+  
+  // Critical Alerts
+  if (data.runway < 6) {
+    reports.push({ 
+      level: 'CRITICAL', 
+      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
+      type: 'survival' 
+    });
+  }
+  
+  // Operational Advice
+  if (data.ebitdaMargin < 15) {
+    reports.push({ 
+      level: 'WARNING', 
+      msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
+      type: 'efficiency' 
+    });
+  }
+  
+  // Capital Advice
+  if (data.totalInvestorEquity > 30) {
+    reports.push({ 
+      level: 'ADVISORY', 
+      msg: "High external dilution. Focus on hitting milestones before next round.", 
+      type: 'equity' 
+    });
+  }
+  
+  return reports;
+};
