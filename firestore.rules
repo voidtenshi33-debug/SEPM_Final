@@ -83,26 +83,5 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isSignedIn();
     }
-
-    match /teamMembers/{memberId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn();
-    }
-
-    match /projects/{projectId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn();
-    }
-
-    match /tasks/{taskId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn();
-    }
   }
 }
