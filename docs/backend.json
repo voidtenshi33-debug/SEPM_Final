@@ -10,9 +10,11 @@
         "name": { "type": "string" },
         "industry": { "type": "string" },
         "stage": { "type": "string" },
+        "businessType": { "type": "string", "enum": ["Product", "Service", "Hybrid"] },
+        "mission": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "industry", "stage"]
+      "required": ["id", "name", "industry", "stage", "businessType"]
     },
     "Financials": {
       "title": "Financials",
@@ -25,6 +27,11 @@
         "operatingExpenses": { "type": "number" },
         "cogs": { "type": "number" },
         "unitsSold": { "type": "number" },
+        "ordersCount": { "type": "number" },
+        "activeClients": { "type": "number" },
+        "billableHours": { "type": "number" },
+        "retainedClients": { "type": "number" },
+        "pipelineValue": { "type": "number" },
         "recurringRevenue": { "type": "number" },
         "oneTimeRevenue": { "type": "number" }
       },
@@ -125,6 +132,10 @@
     "providers": ["password", "anonymous"]
   },
   "firestore": {
+    "startupProfile": {
+      "schema": "#/backend/entities/StartupProfile",
+      "description": "The foundational profile document for the startup."
+    },
     "leadership": {
       "schema": "#/backend/entities/LeadershipMember",
       "description": "Collection of leadership members for the startup."

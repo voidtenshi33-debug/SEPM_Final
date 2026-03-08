@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -12,6 +13,11 @@ service cloud.firestore {
 
     function isExistingUserAuthorized() {
       return isSignedIn() && resource != null;
+    }
+
+    match /startupProfile/main {
+      allow get: if isSignedIn();
+      allow create, update: if isSignedIn();
     }
 
     match /financials/{monthId} {
