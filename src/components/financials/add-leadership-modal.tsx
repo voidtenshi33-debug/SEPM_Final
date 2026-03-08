@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useFirestore, useUser } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection } from "firebase/firestore";
+import { addDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { 
   Dialog, 
   DialogContent, 
@@ -19,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, ShieldCheck, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { addYears, format } from "date-fns";
 
 export function AddLeadershipModal() {
   const [open, setOpen] = React.useState(false);
@@ -40,30 +42,33 @@ export function AddLeadershipModal() {
     const vestingYears = Number(formData.get("vestingYears"));
     const vestingStartDate = formData.get("vestingStartDate") as string;
     
-    // Calculate vesting end date
+    // Calculate vesting end date using date-fns for precision
     const start = new Date(vestingStartDate);
-    const end = new Date(start);
-    end.setFullYear(start.getFullYear() + vestingYears);
+    const endDate = format(addYears(start, vestingYears), 'yyyy-MM-dd');
+
+    const memberData = {
+      name,
+      email,
+      roleTitle,
+      responsibility,
+      equityPct,
+      vestingYears,
+      vestingStartDate,
+      vestingEndDate: endDate,
+      inviteStatus: "Pending",
+      userUid: null,
+      addedBy: user?.uid || "system",
+      createdAt: new Date().toISOString(),
+    };
 
     try {
-      await addDoc(collection(firestore, "leadership"), {
-        name,
-        email,
-        roleTitle,
-        responsibility,
-        equityPct,
-        vestingYears,
-        vestingStartDate: new Date(vestingStartDate).toISOString(),
-        vestingEndDate: end.toISOString(),
-        inviteStatus: "Pending",
-        userUid: null,
-        addedBy: user?.uid,
-        createdAt: serverTimestamp(),
-      });
+      const ref = collection(firestore, "leadership");
+      // Use the standard non-blocking pattern for immediate UI response
+      addDocumentNonBlocking(ref, memberData);
       
       toast({
         title: "Invitation Created",
-        description: `${name} has been added as ${roleTitle} with Pending status.`,
+        description: `${name} has been added as ${roleTitle}. Copy the invite link from the team page.`,
       });
       setOpen(false);
     } catch (error) {
@@ -81,14 +86,14 @@ export function AddLeadershipModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="bg-accent hover:bg-accent/90 shadow-md px-6">
-          <UserPlus className="h-4 w-4 mr-2" /> Add Member
+          <UserPlus className="h-4 w-4 mr-2" /> Add Leader
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
             <ShieldCheck className="h-5 w-5 text-accent" />
-            Add Leadership Member
+            Issue Equity & Invite Leader
           </DialogTitle>
           <DialogDescription>
             Grant equity and set governance terms for core team members.
@@ -98,56 +103,49 @@ export function AddLeadershipModal() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" name="name" required />
+              <Input id="name" name="name" placeholder="Jane Doe" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
+              <Label htmlFor="email">Email Address</Label>
+              <Input id="email" name="email" type="email" placeholder="jane@startup.com" required />
             </div>
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="roleTitle">Role Title</Label>
-            <Select name="roleTitle" required>
-              <SelectTrigger>
-                <SelectValue placeholder="Select role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CEO">CEO & Founder</SelectItem>
-                <SelectItem value="CTO">CTO</SelectItem>
-                <SelectItem value="CFO">CFO</SelectItem>
-                <SelectItem value="COO">COO</SelectItem>
-                <SelectItem value="VP Engineering">VP Engineering</SelectItem>
-                <SelectItem value="Head of Product">Head of Product</SelectItem>
-                <SelectItem value="Head of Growth">Head of Growth</SelectItem>
-              </SelectContent>
-            </Select>
+            <Input id="roleTitle" name="roleTitle" placeholder="e.g. CTO & Co-founder" required />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="responsibility">Key Responsibility</Label>
-            <Textarea id="responsibility" name="responsibility" placeholder="e.g., Owning technical roadmap and architectural scaling." rows={2} />
+            <Label htmlFor="responsibility">Primary Responsibility</Label>
+            <Textarea id="responsibility" name="responsibility" placeholder="e.g. Technology Roadmap and infrastructure scaling." rows={2} />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 border-t pt-4">
             <div className="space-y-2">
-              <Label htmlFor="equityPct">Equity %</Label>
-              <Input id="equityPct" name="equityPct" type="number" step="0.01" required />
+              <Label htmlFor="equityPct">Equity Stake (%)</Label>
+              <Input id="equityPct" name="equityPct" type="number" step="0.1" placeholder="10.0" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vestingYears">Vesting Years</Label>
+              <Label htmlFor="vestingYears">Vesting Period (Y)</Label>
               <Input id="vestingYears" name="vestingYears" type="number" defaultValue="4" required />
             </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="vestingStartDate">Vesting Start Date</Label>
-            <Input id="vestingStartDate" name="vestingStartDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+            <Input 
+              id="vestingStartDate" 
+              name="vestingStartDate" 
+              type="date" 
+              required 
+              defaultValue={format(new Date(), 'yyyy-MM-dd')} 
+            />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-4">
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Invitation"}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Finalize & Issue Invitation"}
             </Button>
           </DialogFooter>
         </form>
