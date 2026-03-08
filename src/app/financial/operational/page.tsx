@@ -40,17 +40,15 @@ export default function OperationalPage() {
   // Data subscriptions
   const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('month', 'desc'), limit(12)), [db]);
   const catQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
-  const expQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
 
   const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
   const { data: categories } = useCollection(catQuery);
-  const { data: expenses, isLoading: loadingExp } = useCollection(expQuery);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (loadingFin || loadingExp) {
+  if (loadingFin) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
