@@ -110,7 +110,7 @@ export default function OperationalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Month Selector */}
+      {/* Header with Set Budget & Log Expense */}
       <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
         <div className="flex items-center gap-3">
           <Target className="h-5 w-5 text-accent" />
@@ -135,7 +135,7 @@ export default function OperationalPage() {
         </div>
       </div>
 
-      {/* Top Summary Cards */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-none shadow-xl bg-[#0F172A] text-white">
           <CardContent className="p-6">
@@ -183,7 +183,7 @@ export default function OperationalPage() {
         </Card>
       </div>
 
-      {/* Budget vs Actual Intelligence Section */}
+      {/* Budget vs Actual Variance Table */}
       <div id="budget" className="space-y-6 pt-4 scroll-mt-20">
         <div className="flex items-center gap-2 px-1">
           <ShieldAlert className="h-5 w-5 text-accent" />
@@ -242,7 +242,7 @@ export default function OperationalPage() {
                   </tbody>
                   <tfoot className="bg-slate-50 font-bold border-t">
                     <tr>
-                      <td className="px-6 py-4">TOTAL OPERATIONAL BURN</td>
+                      <td className="px-6 py-4 text-slate-600 uppercase tracking-wider text-[10px]">Total Operational Burn</td>
                       <td className="px-6 py-4">
                          <div className="space-y-1 max-w-[200px] ml-auto">
                             <Progress value={totalProgress} className={cn("h-3 rounded-full", totalProgress > 100 ? "bg-rose-100 [&>div]:bg-rose-600" : "bg-emerald-100 [&>div]:bg-emerald-600")} />
@@ -280,6 +280,7 @@ export default function OperationalPage() {
         </Card>
       </div>
 
+      {/* Visual Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="border-none shadow-xl">
           <CardHeader>
