@@ -10,9 +10,16 @@ import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
+/**
+ * AddFinancialsModal - The Monthly Master Log for StartupOS.
+ * Adapts its UI based on the businessType (Product, Service, Hybrid) 
+ * defined in the StartupProfile.
+ */
 export function AddFinancialsModal() {
   const [open, setOpen] = React.useState(false);
   const db = useFirestore();
+  
+  // Reference the startup profile to determine which metrics to show
   const profileRef = useMemoFirebase(() => doc(db, 'startupProfile', 'main'), [db]);
   const { data: profile } = useDoc(profileRef);
 
@@ -21,30 +28,32 @@ export function AddFinancialsModal() {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const monthId = formData.get('month') as string; // YYYY-MM
+    const monthId = formData.get('month') as string; // Expected format: YYYY-MM
     
     const netRevenue = Number(formData.get('revenue'));
     const opEx = Number(formData.get('opex'));
+    const recurring = Number(formData.get('recurring') || 0);
 
     const financialData = {
       id: monthId,
-      grossRevenue: netRevenue,
+      grossRevenue: netRevenue, // Simplified for MVP
       discounts: 0,
       netRevenue: netRevenue,
       operatingExpenses: opEx,
-      cogs: Number(formData.get('cogs')),
+      cogs: Number(formData.get('cogs') || 0),
       unitsSold: Number(formData.get('units') || 0),
       ordersCount: Number(formData.get('orders') || 0),
       activeClients: Number(formData.get('clients') || 0),
       totalClients: Number(formData.get('totalClients') || 0),
       retainedClients: Number(formData.get('retainedClients') || 0),
       billableHours: Number(formData.get('hours') || 0),
-      recurringRevenue: Number(formData.get('recurring') || 0),
-      oneTimeRevenue: netRevenue - Number(formData.get('recurring') || 0),
+      recurringRevenue: recurring,
+      oneTimeRevenue: netRevenue - recurring,
       dateRecorded: new Date().toISOString(),
     };
 
     const finRef = doc(db, 'financials', monthId);
+    // Use non-blocking update for optimistic UI
     setDocumentNonBlocking(finRef, financialData, { merge: true });
     setOpen(false);
   };
@@ -52,7 +61,7 @@ export function AddFinancialsModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-[#3B82F6] hover:bg-blue-700 text-white font-bold shadow-lg">
+        <Button className="bg-accent hover:bg-accent/90 text-white font-bold shadow-lg">
           <Plus className="h-4 w-4 mr-2" /> Log Monthly Data
         </Button>
       </DialogTrigger>
@@ -60,14 +69,20 @@ export function AddFinancialsModal() {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-[#3B82F6]" />
+              <Wallet className="h-5 w-5 text-accent" />
               Record Monthly Performance
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="grid gap-2">
               <Label htmlFor="month">Month (YYYY-MM)</Label>
-              <Input id="month" name="month" placeholder="2024-03" required defaultValue={new Date().toISOString().substring(0, 7)} />
+              <Input 
+                id="month" 
+                name="month" 
+                placeholder="2024-03" 
+                required 
+                defaultValue={new Date().toISOString().substring(0, 7)} 
+              />
             </div>
             
             <div className="grid grid-cols-2 gap-4">
@@ -135,7 +150,7 @@ export function AddFinancialsModal() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button type="submit" className="bg-[#3B82F6] hover:bg-blue-700 w-full font-bold">
+            <Button type="submit" className="bg-accent hover:bg-accent/90 w-full font-bold">
               Save Monthly Records
             </Button>
           </DialogFooter>
