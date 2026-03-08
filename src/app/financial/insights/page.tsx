@@ -23,6 +23,7 @@ import {
   generateInsights,
   type HealthMetrics 
 } from "@/modules/financial/utils/financialEngine";
+import { cn } from "@/lib/utils";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
