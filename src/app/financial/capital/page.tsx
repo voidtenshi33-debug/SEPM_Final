@@ -1,17 +1,9 @@
-
 'use client';
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, doc } from "firebase/firestore";
-import { 
-  validateEquity, 
-  formatINR, 
-  calculatePostMoney,
-  calculateVestingProgress,
-  calcRemainingTenure
-} from "@/modules/financial/utils/financialEngine";
+import { useFinancials } from "@/modules/financial/hooks/useFinancials";
+import { validateEquity, formatINR } from "@/modules/financial/utils/financialEngine";
 import { 
   PieChart, 
   Pie, 
@@ -26,88 +18,42 @@ import {
   Rocket, 
   Briefcase, 
   ArrowRight, 
-  AlertTriangle,
-  FileDown
+  AlertTriangle
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 
 const COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B'];
 
-export default function CapitalDashboard() {
+export default function CapitalMasterDashboard() {
   const [mounted, setMounted] = useState(false);
-  const db = useFirestore();
+  const { capTable, leadership, investors, isLoading } = useFinancials();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('startDate', 'desc')), [db]);
-  const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
-  const leadershipQuery = useMemoFirebase(() => collection(db, 'leadership'), [db]);
-  const capRef = useMemoFirebase(() => doc(db, 'capitalStructure', 'main'), [db]);
-
-  const { data: rounds } = useCollection(roundsQuery);
-  const { data: investors } = useCollection(investorsQuery);
-  const { data: leadership } = useCollection(leadershipQuery);
-  const { data: capTable } = useDoc(capRef);
+  if (isLoading) return null;
 
   const totalInvEquity = investors?.reduce((sum, inv) => sum + (inv.equityPct || 0), 0) || 0;
   const totalLeadershipEquity = leadership?.reduce((sum, member) => sum + (member.equityPct || 0), 0) || 0;
   
   const capData = [
-    { name: 'Founders', value: capTable?.founderEquityPct || 0 },
+    { name: 'Founders', value: capTable?.founderPct || 0 },
     { name: 'Leadership', value: totalLeadershipEquity },
     { name: 'Investors', value: totalInvEquity },
-    { name: 'ESOP Pool', value: capTable?.esopEquityPct || 0 },
+    { name: 'ESOP Pool', value: capTable?.esopPct || 0 },
   ].filter(d => d.value > 0);
 
   const validation = validateEquity(
-    capTable?.founderEquityPct || 0,
+    capTable?.founderPct || 0,
     totalLeadershipEquity,
     totalInvEquity,
-    capTable?.esopEquityPct || 0
+    capTable?.esopPct || 0
   );
-
-  const handleExportInvestorReport = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(22);
-    doc.text("Investor Relations: Governance Brief", 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-
-    autoTable(doc, {
-      startY: 45,
-      head: [['Stakeholder', 'Equity %']],
-      body: [
-        ['Founders', `${capTable?.founderEquityPct || 0}%`],
-        ['Leadership', `${totalLeadershipEquity}%`],
-        ['Investors', `${totalInvEquity}%`],
-        ['ESOP Pool', `${capTable?.esopEquityPct || 0}%`],
-      ],
-    });
-
-    doc.save("UdyamRakshak_Governance_Brief.pdf");
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
-            <ShieldCheck className="h-8 w-8 text-accent" />
-            Capital & Governance
-          </h1>
-          <p className="text-muted-foreground">Unified tracking for equity, funding rounds, and leadership.</p>
-        </div>
-        <Button onClick={handleExportInvestorReport} variant="outline" className="border-accent text-accent">
-          <FileDown className="h-4 w-4 mr-2" /> Download Investor Brief
-        </Button>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="border-none shadow-xl lg:col-span-1 h-fit">
           <CardHeader>
@@ -133,11 +79,7 @@ export default function CapitalDashboard() {
                   <Legend verticalAlign="bottom" height={36} iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <ShieldCheck className="h-8 w-8 text-slate-200 animate-pulse" />
-              </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -148,7 +90,7 @@ export default function CapitalDashboard() {
                 <CardContent className="p-6">
                   <Users className="h-8 w-8 text-blue-600 mb-4" />
                   <h3 className="font-bold text-lg mb-1">Leadership</h3>
-                  <p className="text-xs text-muted-foreground mb-4">Manage team equity and vesting schedules.</p>
+                  <p className="text-xs text-muted-foreground mb-4">Equity vesting & team access.</p>
                   <div className="flex items-center text-xs font-bold text-blue-600">
                     GO TO MODULE <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -161,7 +103,7 @@ export default function CapitalDashboard() {
                 <CardContent className="p-6">
                   <Rocket className="h-8 w-8 text-indigo-600 mb-4" />
                   <h3 className="font-bold text-lg mb-1">Rounds</h3>
-                  <p className="text-xs text-muted-foreground mb-4">Track target vs. actual capital raised.</p>
+                  <p className="text-xs text-muted-foreground mb-4">Funding targets vs. actuals.</p>
                   <div className="flex items-center text-xs font-bold text-indigo-600">
                     GO TO MODULE <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -174,7 +116,7 @@ export default function CapitalDashboard() {
                 <CardContent className="p-6">
                   <Briefcase className="h-8 w-8 text-emerald-600 mb-4" />
                   <h3 className="font-bold text-lg mb-1">Investors</h3>
-                  <p className="text-xs text-muted-foreground mb-4">View strategic shareholders and ledger.</p>
+                  <p className="text-xs text-muted-foreground mb-4">Relational stakeholder ledger.</p>
                   <div className="flex items-center text-xs font-bold text-emerald-600">
                     GO TO MODULE <ArrowRight className="h-3 w-3 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>
@@ -186,7 +128,7 @@ export default function CapitalDashboard() {
           <Card className="border-none shadow-xl">
             <CardHeader>
               <CardTitle className="text-lg font-bold">Relational Summary</CardTitle>
-              <CardDescription>Consolidated view of active governance state.</CardDescription>
+              <CardDescription>Consolidated state of active governance.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

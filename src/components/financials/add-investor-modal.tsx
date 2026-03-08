@@ -34,49 +34,38 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
-    const name = formData.get("name") as string;
-    const email = formData.get("email") as string;
-    const type = formData.get("type") as string;
     const roundId = formData.get("roundId") as string;
-    const investmentAmount = Number(formData.get("investmentAmount"));
-    const equityPct = Number(formData.get("equityPct"));
-    const dealEndDate = formData.get("dealEndDate") as string;
+    const amount = Number(formData.get("investmentAmount"));
 
     try {
-      // 1. Create Investor
+      // 1. Log Investor
       await addDoc(collection(firestore, "investors"), {
-        name,
-        email,
-        type,
         roundId,
-        investmentAmount,
-        equityPct,
-        tenureYears: 5, // Default
-        lockInYears: 3, // Default
-        dealStartDate: new Date().toISOString(),
-        dealEndDate: new Date(dealEndDate).toISOString(),
+        name: formData.get("name") as string,
+        investmentAmount: amount,
+        equityPct: Number(formData.get("equityPct")),
+        tenureYears: Number(formData.get("tenureYears")),
+        dealStartDate: formData.get("dealStartDate") as string,
+        dealEndDate: formData.get("dealEndDate") as string,
         loyalty: true,
-        reportingFrequency: "Monthly",
-        status: "Active",
         createdAt: serverTimestamp(),
       });
       
-      // 2. Update Round Totals (Relational Integrity)
+      // 2. Atomic update to parent Round
       const roundRef = doc(firestore, "rounds", roundId);
       await updateDoc(roundRef, {
-        totalRaised: increment(investmentAmount),
-        totalInvestors: increment(1)
+        amountRaised: increment(amount),
       });
 
       toast({
-        title: "Investment Logged",
-        description: `Successfully added ${name} to the round.`,
+        title: "Shareholder Added",
+        description: `Successfully linked investment to the funding round.`,
       });
       setOpen(false);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Could not save investor record.",
+        description: "Could not link investor record.",
         variant: "destructive",
       });
     } finally {
@@ -95,10 +84,10 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-accent" />
-            Add Strategic Investor
+            Add Shareholder
           </DialogTitle>
           <DialogDescription>
-            Every investment must be linked to an active funding round.
+            Link this investment to an active funding round.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -106,44 +95,24 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
             <Label htmlFor="roundId">Funding Round Context</Label>
             <Select name="roundId" required>
               <SelectTrigger>
-                <SelectValue placeholder="Select active round" />
+                <SelectValue placeholder="Select round" />
               </SelectTrigger>
               <SelectContent>
                 {rounds.map((round) => (
                   <SelectItem key={round.id} value={round.id}>
-                    {round.roundName} ({round.status})
+                    {round.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Investor Name</Label>
-              <Input id="name" name="name" placeholder="Individual or VC" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-          </div>
           <div className="space-y-2">
-            <Label htmlFor="type">Investor Type</Label>
-            <Select name="type" required defaultValue="Angel">
-              <SelectTrigger>
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Angel">Angel Investor</SelectItem>
-                <SelectItem value="VC">Venture Capital</SelectItem>
-                <SelectItem value="Corporate">Corporate VC</SelectItem>
-                <SelectItem value="Incubator">Incubator / Accelerator</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label htmlFor="name">Investor Name</Label>
+            <Input id="name" name="name" required />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="investmentAmount">Amount (₹)</Label>
+              <Label htmlFor="investmentAmount">Investment (₹)</Label>
               <Input id="investmentAmount" name="investmentAmount" type="number" required />
             </div>
             <div className="space-y-2">
@@ -151,13 +120,19 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
               <Input id="equityPct" name="equityPct" type="number" step="0.01" required />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="dealEndDate">Lock-in End Date</Label>
-            <Input id="dealEndDate" name="dealEndDate" type="date" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="dealStartDate">Start Date</Label>
+              <Input id="dealStartDate" name="dealStartDate" type="date" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dealEndDate">Lock-in End</Label>
+              <Input id="dealEndDate" name="dealEndDate" type="date" required />
+            </div>
           </div>
           <DialogFooter>
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={loading}>
-              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Investment"}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Shareholder"}
             </Button>
           </DialogFooter>
         </form>

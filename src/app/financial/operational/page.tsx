@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit, where } from "firebase/firestore";
+import { useFinancials } from "@/modules/financial/hooks/useFinancials";
 import { 
   calcEBITDA, 
   calcEBITDAMargin, 
@@ -20,9 +19,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
   Legend
 } from "recharts";
 import { 
@@ -31,73 +27,15 @@ import {
   Activity, 
   Wallet, 
   AlertCircle,
-  PieChart as PieIcon,
-  LayoutList,
   CheckCircle2,
   Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AddExpenseModal } from "@/components/financials/add-expense-modal";
-
-const CHART_COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
 export default function OperationalPage() {
-  const [mounted, setMounted] = useState(false);
-  const db = useFirestore();
-  
-  // Fetch snapshots
-  const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('month', 'desc'), limit(12)), [db]);
-  const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
+  const { financials, expenses, categories, latestMonth, prevMonth, isLoading } = useFinancials();
 
-  // Fetch categories for mapping
-  const catQuery = useMemoFirebase(() => query(collection(db, 'expenseCategories'), orderBy('name', 'asc')), [db]);
-  const { data: categories } = useCollection(catQuery);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const currentMonth = financials?.[0];
-  const prevMonth = financials?.[1];
-
-  const netRev = currentMonth?.netRevenue || 0;
-  const opEx = currentMonth?.operatingExpenses || 0;
-  const ebitda = calcEBITDA(netRev, opEx);
-  const margin = calcEBITDAMargin(ebitda, netRev);
-  
-  const prevNetRev = prevMonth?.netRevenue || 0;
-  const prevOpEx = prevMonth?.operatingExpenses || 0;
-  const prevEbitda = calcEBITDA(prevNetRev, prevOpEx);
-
-  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash for prototype
-
-  // Fetch individual expenses for the current month distribution
-  const currentMonthId = currentMonth?.month || '';
-  const expensesQuery = useMemoFirebase(() => 
-    currentMonthId ? query(collection(db, 'expenses'), where('month', '==', currentMonthId)) : null, 
-    [db, currentMonthId]
-  );
-  const { data: expenses } = useCollection(expensesQuery);
-
-  // Process Distribution Data
-  const distributionData = React.useMemo(() => {
-    return getMonthlyDistribution(expenses, categories);
-  }, [expenses, categories]);
-
-  const fixedVsVariable = React.useMemo(() => {
-    const fixed = distributionData.filter(d => d.type === 'Fixed').reduce((sum, d) => sum + d.percentage, 0);
-    return { fixed };
-  }, [distributionData]);
-
-  const chartData = financials?.map(f => ({
-    month: f.month,
-    revenue: f.netRevenue,
-    expenses: f.operatingExpenses,
-  })).reverse() || [];
-
-  const isOperatingPositive = netRev >= opEx;
-
-  if (loadingFin || !mounted) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -105,18 +43,31 @@ export default function OperationalPage() {
     );
   }
 
+  const netRev = latestMonth?.netRevenue || 0;
+  const opEx = latestMonth?.operatingExpenses || 0;
+  const ebitda = calcEBITDA(netRev, opEx);
+  const margin = calcEBITDAMargin(ebitda, netRev);
+  
+  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash balance
+
+  const chartData = [...financials].reverse().map(f => ({
+    month: f.id,
+    revenue: f.netRevenue,
+    expenses: f.operatingExpenses,
+  }));
+
+  const monthlyExpenses = expenses?.filter(e => e.monthId === latestMonth?.id) || [];
+  const distribution = getMonthlyDistribution(monthlyExpenses, categories);
+  const fixedPct = distribution.filter(d => d.type === 'Fixed').reduce((s, d) => s + d.percentage, 0);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
-      {/* Top Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="border-none shadow-xl bg-[#0F172A] text-white overflow-hidden relative">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <Wallet className="h-12 w-12" />
-          </div>
+        <Card className="border-none shadow-xl bg-[#0F172A] text-white">
           <CardContent className="p-6">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Cash Runway</p>
             <p className="text-3xl font-bold">{runway} Months</p>
-            <p className="text-[10px] text-slate-500 mt-2 font-medium italic">Est. depletion: Nov 2025</p>
+            <p className="text-[10px] text-slate-500 mt-2 italic">Est. depletion: Nov 2025</p>
           </CardContent>
         </Card>
 
@@ -124,7 +75,7 @@ export default function OperationalPage() {
           <CardContent className="p-6">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</p>
             <p className="text-3xl font-bold font-headline">{formatINR(opEx)}</p>
-            <div className="flex items-center text-[10px] text-rose-600 mt-2 font-bold uppercase tracking-widest">
+            <div className="flex items-center text-[10px] text-rose-600 mt-2 font-bold uppercase">
                <TrendingUp className="h-3 w-3 mr-1" /> Variable Risk
             </div>
           </CardContent>
@@ -132,11 +83,11 @@ export default function OperationalPage() {
 
         <Card className="border-none shadow-xl">
           <CardContent className="p-6">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">EBITDA (Current)</p>
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly EBITDA</p>
             <p className="text-3xl font-bold font-headline">{formatINR(ebitda)}</p>
-            <div className={`flex items-center text-[10px] mt-2 font-bold uppercase ${ebitda >= prevEbitda ? 'text-emerald-600' : 'text-rose-600'}`}>
-               {ebitda >= prevEbitda ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
-               {formatINR(Math.abs(ebitda - prevEbitda))} vs prev
+            <div className={`flex items-center text-[10px] mt-2 font-bold uppercase ${ebitda >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+               {ebitda >= 0 ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+               {ebitda >= 0 ? 'Profitable' : 'Net Loss'}
             </div>
           </CardContent>
         </Card>
@@ -146,7 +97,7 @@ export default function OperationalPage() {
             <div className="flex items-center justify-between mb-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Efficiency</p>
               {margin < 15 && margin > 0 && (
-                <Badge variant="destructive" className="text-[8px] h-4 uppercase font-bold">Low Margin</Badge>
+                <Badge variant="destructive" className="text-[8px] h-4 uppercase">Low Margin</Badge>
               )}
             </div>
             <p className="text-3xl font-bold font-headline">{margin.toFixed(1)}%</p>
@@ -158,28 +109,11 @@ export default function OperationalPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Primary Trend Chart */}
-        <Card className="lg:col-span-2 border-none shadow-xl bg-white">
+        <Card className="lg:col-span-2 border-none shadow-xl">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg font-bold flex items-center">
-                <Activity className="h-5 w-5 mr-2 text-[#3B82F6]" />
-                Burn vs. Revenue Intelligence
-              </CardTitle>
-              <CardDescription>Historical performance trend in INR (₹)</CardDescription>
-            </div>
-            <div className="flex items-center">
-              {isOperatingPositive ? (
-                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 flex items-center gap-1.5 px-3 py-1 font-bold text-[10px] uppercase">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  Unit Positive
-                </Badge>
-              ) : (
-                <Badge className="bg-rose-50 text-rose-700 border-rose-100 flex items-center gap-1.5 px-3 py-1 font-bold text-[10px] uppercase">
-                  <TrendingDown className="h-3.5 w-3.5" />
-                  Net Burn
-                </Badge>
-              )}
+              <CardTitle className="text-lg font-bold">Burn vs. Revenue Intelligence</CardTitle>
+              <CardDescription>Historical trend analysis (₹)</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="h-[400px] p-6 pt-0">
@@ -199,126 +133,34 @@ export default function OperationalPage() {
           </CardContent>
         </Card>
 
-        {/* AI Intelligence Block */}
-        <Card className="border-none shadow-xl bg-accent/5 border border-accent/10 flex flex-col">
+        <Card className="border-none shadow-xl bg-accent/5 border border-accent/10">
           <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2 text-accent">
+            <CardTitle className="text-lg font-bold text-accent flex items-center gap-2">
               <AlertCircle className="h-5 w-5" />
               Operational Guard
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 space-y-4">
-             <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
+          <CardContent className="space-y-6">
+             <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100">
                 <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Efficiency Analysis</h4>
-                {margin < 15 ? (
-                  <p className="text-sm text-slate-600 leading-relaxed italic">"EBITDA Margin is below 15%. Efficiency optimization in overhead costs is recommended to stabilize unit economics."</p>
-                ) : (
-                  <p className="text-sm text-slate-600 leading-relaxed italic">"Business model becoming sustainable. EBITDA margin is healthy and trending towards scale."</p>
-                )}
+                <p className="text-sm text-slate-600 leading-relaxed italic">
+                  {margin < 15 ? "EBITDA Margin is below benchmark. Focus on optimizing overhead costs." : "Healthy unit economics detected. Model is trending towards scale."}
+                </p>
              </div>
              
-             <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Fixed Cost Rigidity</h4>
+             <div className="p-4 rounded-xl bg-white shadow-sm border border-slate-100">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Cost Rigidity</h4>
                 <div className="space-y-2">
                    <div className="flex justify-between text-sm">
-                      <span className="text-slate-500 font-medium">Structural Rigidity</span>
-                      <span className="font-bold text-slate-900">{fixedVsVariable.fixed.toFixed(1)}%</span>
+                      <span className="text-slate-500">Structural Rigidity</span>
+                      <span className="font-bold">{fixedPct.toFixed(1)}%</span>
                    </div>
                    <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${fixedVsVariable.fixed}%` }} />
+                      <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${fixedPct}%` }} />
                    </div>
-                   <p className="text-[10px] text-slate-400 italic">High rigidity reduces pivot elasticity in a crisis.</p>
+                   <p className="text-[10px] text-slate-400 italic">High rigidity reduces pivot elasticity.</p>
                 </div>
              </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Expense Distribution Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <PieIcon className="h-5 w-5 text-accent" />
-              Expense Allocation (%)
-            </CardTitle>
-            <CardDescription>Current period distribution by classification</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">
-            {mounted && distributionData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={distributionData}
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="amount"
-                    nameKey="name"
-                  >
-                    {distributionData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} strokeWidth={0} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    formatter={(value: number) => [formatINR(value), 'Spend']}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}
-                  />
-                  <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl text-slate-400 text-center p-8">
-                <PieIcon className="h-10 w-10 mb-2 opacity-20" />
-                <p className="text-sm font-medium mb-4 italic">No categorical spend detected for {currentMonthId || 'Current period'}</p>
-                <AddExpenseModal categories={categories || []} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <LayoutList className="h-5 w-5 text-accent" />
-              Burn Breakdown
-            </CardTitle>
-            <CardDescription>Exact spending vs. % contribution</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Category</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Type</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Amount</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">% Spend</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {distributionData.map((row, i) => (
-                  <TableRow key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-bold text-slate-700">{row.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[9px] uppercase font-bold tracking-widest ${
-                        row.type === 'Fixed' ? 'text-blue-600 bg-blue-50 border-blue-100' :
-                        row.type === 'Variable' ? 'text-amber-600 bg-amber-50 border-amber-100' :
-                        'text-emerald-600 bg-emerald-50 border-emerald-100'
-                      }`}>
-                        {row.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{formatINR(row.amount)}</TableCell>
-                    <TableCell className="text-right font-bold text-slate-900">{row.percentage.toFixed(1)}%</TableCell>
-                  </TableRow>
-                ))}
-                {distributionData.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-slate-400 italic">No operational data found for this period.</TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>

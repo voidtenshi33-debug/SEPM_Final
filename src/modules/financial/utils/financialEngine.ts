@@ -27,14 +27,6 @@ export function calculateRunway(currentCash: number, monthlyBurn: number): numbe
 }
 
 /**
- * Calculates Growth Percentage
- */
-export function calculateGrowth(current: number, previous: number): number {
-  if (previous === 0) return 0;
-  return ((current - previous) / previous) * 100;
-}
-
-/**
  * Calculates remaining tenure in years for deals or vesting
  */
 export const calcRemainingTenure = (endDate: string | Date | null): string => {
@@ -51,7 +43,7 @@ export const calcRemainingTenure = (endDate: string | Date | null): string => {
 };
 
 /**
- * Formats currency to INR (₹) using en-IN locale
+ * Formats currency to INR (₹)
  */
 export const formatINR = (amount: number | undefined | null): string =>
   new Intl.NumberFormat("en-IN", {
@@ -61,7 +53,7 @@ export const formatINR = (amount: number | undefined | null): string =>
   }).format(amount || 0);
 
 /**
- * Validates if the cap table total equity split is exactly 100%
+ * Validates cap table distribution
  */
 export function validateEquity(
   founderPct: number, 
@@ -84,14 +76,6 @@ export const calculatePostMoney = (preMoney: number, totalRaised: number): numbe
   (preMoney || 0) + (totalRaised || 0);
 
 /**
- * Calculates Average Order Value (AOV)
- */
-export function calculateAOV(netRevenue: number, ordersCount: number): number {
-  if (ordersCount <= 0) return 0;
-  return (netRevenue || 0) / ordersCount;
-}
-
-/**
  * Product-specific sales metrics
  */
 export const calculateProductMetrics = (data: any) => ({
@@ -106,13 +90,13 @@ export const calculateProductMetrics = (data: any) => ({
 export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
   revenuePerClient: data.activeClients > 0 ? (data.netRevenue || 0) / data.activeClients : 0,
   utilizationRate: (teamSize > 0) ? ((data.billableHours || 0) / (teamSize * 160)) * 100 : 0,
-  clientRetention: data.activeClients > 0 
-    ? ((data.retainedClients || 0) / data.activeClients) * 100 
+  clientRetention: (data.totalClients > 0) 
+    ? ((data.retainedClients || 0) / data.totalClients) * 100 
     : 0
 });
 
 /**
- * Calculates Health Score (0-100) based on Rakshak (Protector) logic.
+ * Calculates Health Score (0-100)
  */
 export const calculateHealthScore = (data: { 
   runway: number; 
@@ -149,42 +133,6 @@ export const calculateVestingProgress = (startDate: string | Date, years: number
 };
 
 /**
- * Generates actionable strategic insights
- */
-export const generateInsights = (data: { 
-  runway: number; 
-  ebitdaMargin: number; 
-  totalInvestorEquity: number 
-}) => {
-  const reports = [];
-  if (data.runway < 6) {
-    reports.push({ 
-      level: 'CRITICAL', 
-      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
-      type: 'survival',
-      icon: 'ShieldAlert'
-    });
-  }
-  if (data.ebitdaMargin < 15) {
-    reports.push({ 
-      level: 'WARNING', 
-      msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
-      type: 'efficiency',
-      icon: 'Activity'
-    });
-  }
-  if (data.totalInvestorEquity > 30) {
-    reports.push({ 
-      level: 'ADVISORY', 
-      msg: "High external dilution. Focus on hitting milestones before next round.", 
-      type: 'equity',
-      icon: 'Users'
-    });
-  }
-  return reports;
-};
-
-/**
  * Aggregates monthly expenses by category
  */
 export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
@@ -216,16 +164,4 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
   }, {} as Record<string, any>);
   
   return Object.values(grouped).sort((a, b) => b.amount - a.amount);
-};
-
-/**
- * Groups expenses by type
- */
-export const groupExpensesByType = (expenses: any[], categories: any[]) => {
-  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
-  return expenses.reduce((acc, exp) => {
-    const type = catMap[exp.categoryId] || "Variable";
-    acc[type] = (acc[type] || 0) + exp.amount;
-    return acc;
-  }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };
