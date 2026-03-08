@@ -1,4 +1,3 @@
-
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
  * Ensures consistent math across all financial sub-modules.
@@ -71,19 +70,6 @@ export function validateEquity(
 }
 
 /**
- * Groups expenses by category type (Fixed/Variable).
- */
-export const groupExpensesByType = (expenses: any[], categories: any[]) => {
-  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {});
-  
-  return expenses.reduce((acc, exp) => {
-    const type = catMap[exp.categoryId] || "Variable";
-    acc[type] = (acc[type] || 0) + exp.amount;
-    return acc;
-  }, { Fixed: 0, Variable: 0, "R&D": 0 });
-};
-
-/**
  * Intelligence Layer Extensions
  */
 
@@ -94,13 +80,17 @@ export interface HealthMetrics {
   netRevenue: number;
   founderEquity: number;
   totalInvestorEquity: number;
+  salesGrowth?: number;
 }
 
+/**
+ * Calculates a startup Health Score (0-100) based on Guardian Rules.
+ */
 export const calculateHealthScore = (data: HealthMetrics): number => {
   let score = 100;
   // Deductions based on "Rakshak" (Protector) logic
   if (data.runway < 6) score -= 30;
-  if (data.ebitdaMargin < 15) score -= 20;
+  if (data.ebitdaMargin < 10) score -= 20;
   if (data.burnRate > data.netRevenue) score -= 15;
   if (data.founderEquity < 51) score -= 10;
   return Math.max(score, 0);
@@ -109,36 +99,57 @@ export const calculateHealthScore = (data: HealthMetrics): number => {
 export interface StrategicInsight {
   level: 'CRITICAL' | 'WARNING' | 'ADVISORY';
   msg: string;
-  type: 'survival' | 'efficiency' | 'equity';
+  type: 'survival' | 'efficiency' | 'equity' | 'growth';
+  icon?: string;
 }
 
+/**
+ * Generates rule-based strategic insights for the founder.
+ */
 export const generateInsights = (data: HealthMetrics): StrategicInsight[] => {
   const reports: StrategicInsight[] = [];
   
-  // Critical Alerts
+  // 🚩 SURVIVAL RULES
   if (data.runway < 6) {
     reports.push({ 
       level: 'CRITICAL', 
-      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
-      type: 'survival' 
+      msg: "Runway < 6 months. Urgent: Cut non-essential OpEx by 20% or initiate bridge funding.", 
+      type: 'survival',
+      icon: 'ShieldAlert'
     });
   }
   
-  // Operational Advice
-  if (data.ebitdaMargin < 15) {
+  // 📈 GROWTH & EFFICIENCY RULES
+  if (data.ebitdaMargin < 15 && (data.salesGrowth || 0) > 20) {
     reports.push({ 
       level: 'WARNING', 
-      msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
-      type: 'efficiency' 
+      msg: "High growth but low efficiency. Your CAC (Acquisition Cost) might be too high.", 
+      type: 'efficiency',
+      icon: 'TrendingUp'
+    });
+  } else if (data.ebitdaMargin < 15) {
+    reports.push({ 
+      level: 'WARNING', 
+      msg: "EBITDA margin below benchmark (15%). Review variable operating expenses to reach sustainability.", 
+      type: 'efficiency',
+      icon: 'Activity'
     });
   }
   
-  // Capital Advice
-  if (data.totalInvestorEquity > 30) {
+  // 💰 CAPITAL RULES
+  if (data.founderEquity < 50) {
     reports.push({ 
       level: 'ADVISORY', 
-      msg: "High external dilution. Focus on hitting milestones before next round.", 
-      type: 'equity' 
+      msg: "Founder equity is dropping below 50%. Consider debt-financing for the next milestone to avoid losing control.", 
+      type: 'equity',
+      icon: 'Users'
+    });
+  } else if (data.totalInvestorEquity > 30) {
+    reports.push({ 
+      level: 'ADVISORY', 
+      msg: "High external dilution. Focus on hitting aggressive milestones before the next round.", 
+      type: 'equity',
+      icon: 'Briefcase'
     });
   }
   

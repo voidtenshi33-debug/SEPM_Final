@@ -12,7 +12,12 @@ import {
   CheckCircle2, 
   Info,
   Zap,
-  Loader2
+  Loader2,
+  TrendingUp,
+  ShieldAlert,
+  Users,
+  Activity,
+  HeartPulse
 } from "lucide-react";
 import { 
   formatINR, 
@@ -28,7 +33,7 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
 export default function FinancialInsightsPage() {
-  const { financials, latestMonth, capTable, leadership, isLoading } = useFinancials();
+  const { financials, latestMonth, prevMonth, capTable, leadership, isLoading } = useFinancials();
 
   if (isLoading) {
     return (
@@ -43,13 +48,19 @@ export default function FinancialInsightsPage() {
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
   const leadEquity = leadership.reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   
+  // Calculate Growth
+  const salesGrowth = (latestMonth && prevMonth && prevMonth.netRevenue > 0)
+    ? ((latestMonth.netRevenue - prevMonth.netRevenue) / prevMonth.netRevenue) * 100
+    : 0;
+
   const metrics: HealthMetrics = {
     runway: calcRunway(168000, burn), // Fixed cash for prototype
     ebitdaMargin: latestMonth ? calcEBITDAMargin(ebitda, latestMonth.netRevenue) : 0,
     burnRate: burn,
     netRevenue: latestMonth?.netRevenue || 0,
     founderEquity: capTable?.founderEquityPct || 0,
-    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0
+    totalInvestorEquity: capTable?.totalInvestorEquityPct || 0,
+    salesGrowth
   };
 
   const healthScore = calculateHealthScore(metrics);
@@ -59,22 +70,23 @@ export default function FinancialInsightsPage() {
     const doc = new jsPDF();
     
     // Header
-    doc.setFontSize(20);
+    doc.setFontSize(22);
     doc.setTextColor(15, 23, 42); // Founder Blue
     doc.text("UdyamRakshak: Executive Financial Brief", 14, 22);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+    doc.text(`Startup Health Score: ${healthScore}/100`, 14, 36);
 
     // Section 1: Vital Signs
     doc.setFontSize(14);
     doc.setTextColor(15, 23, 42);
-    doc.text("1. Vital Signs (INR)", 14, 45);
+    doc.text("1. Vital Signs (INR)", 14, 48);
     
     autoTable(doc, {
-      startY: 50,
-      head: [['Metric', 'Value']],
+      startY: 53,
+      head: [['Metric', 'Current Value']],
       body: [
         ['Net Revenue', formatINR(metrics.netRevenue)],
         ['Monthly Burn', formatINR(metrics.burnRate)],
@@ -85,9 +97,9 @@ export default function FinancialInsightsPage() {
       headStyles: { fillColor: [59, 130, 246] } // Startup Electric
     });
 
-    // Section 2: Ownership
+    // Section 2: Ownership Snapshot
     const finalY = (doc as any).lastAutoTable.finalY || 50;
-    doc.text("2. Ownership Summary", 14, finalY + 15);
+    doc.text("2. Ownership Snapshot", 14, finalY + 15);
     
     autoTable(doc, {
       startY: finalY + 20,
@@ -101,19 +113,33 @@ export default function FinancialInsightsPage() {
       theme: 'grid'
     });
 
-    // Section 3: AI Advisory
+    // Section 3: AI Strategic Advisory
     const secondY = (doc as any).lastAutoTable.finalY || 120;
-    doc.text("3. Strategic Advisory", 14, secondY + 15);
+    doc.text("3. AI Strategic Advisory", 14, secondY + 15);
     
     doc.setFontSize(10);
     let currentY = secondY + 25;
     insights.forEach((insight, i) => {
-      const prefix = insight.level === 'CRITICAL' ? '!!! ' : insight.level === 'WARNING' ? '! ' : '> ';
-      doc.text(`${prefix}${insight.msg}`, 14, currentY);
-      currentY += 8;
+      const level = insight.level;
+      doc.setFont("helvetica", "bold");
+      doc.text(`${i + 1}. [${level}]`, 14, currentY);
+      doc.setFont("helvetica", "normal");
+      const splitText = doc.splitTextToSize(insight.msg, 170);
+      doc.text(splitText, 45, currentY);
+      currentY += (splitText.length * 5) + 5;
     });
 
     doc.save("UdyamRakshak_Executive_Report.pdf");
+  };
+
+  const getInsightIcon = (iconName?: string) => {
+    switch (iconName) {
+      case 'ShieldAlert': return <ShieldAlert className="h-6 w-6" />;
+      case 'TrendingUp': return <TrendingUp className="h-6 w-6" />;
+      case 'Users': return <Users className="h-6 w-6" />;
+      case 'Activity': return <Activity className="h-6 w-6" />;
+      default: return <Info className="h-6 w-6" />;
+    }
   };
 
   return (
@@ -121,19 +147,23 @@ export default function FinancialInsightsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-emerald-500" />
-            Guardian Strategic Insights
+            <HeartPulse className="h-6 w-6 text-accent" />
+            War Room: Strategic Intelligence
           </h2>
-          <p className="text-muted-foreground">Automated risk assessment and efficiency intelligence.</p>
+          <p className="text-muted-foreground">Automated risk detection and efficiency intelligence layer.</p>
         </div>
-        <Button onClick={handleExportPDF} className="bg-primary hover:bg-primary/90">
+        <Button onClick={handleExportPDF} className="bg-primary hover:bg-primary/90 shadow-lg">
           <FileDown className="h-4 w-4 mr-2" />
-          Export Executive Report (₹)
+          Download Executive Report (₹)
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-1 border-none shadow-xl bg-slate-50 flex flex-col items-center justify-center p-8 text-center">
+        {/* Health Score Gauge */}
+        <Card className="lg:col-span-1 border-none shadow-xl bg-slate-50 flex flex-col items-center justify-center p-8 text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+            <ShieldCheck className="h-24 w-24 text-primary" />
+          </div>
           <div className="relative h-48 w-48 flex items-center justify-center mb-6">
             <svg className="h-full w-full transform -rotate-90">
               <circle
@@ -167,14 +197,15 @@ export default function FinancialInsightsPage() {
           </div>
           <CardTitle>Overall Stability</CardTitle>
           <CardDescription className="mt-2">
-            Weighted assessment of runway, margins, and capital structure.
+            Dynamic assessment of survival runway, unit economics, and governance health.
           </CardDescription>
         </Card>
 
+        {/* Advisory List */}
         <div className="lg:col-span-2 space-y-6">
           <h3 className="text-lg font-bold flex items-center gap-2 px-1">
             <Zap className="h-5 w-5 text-accent" />
-            Strategic Advisories
+            Guardian Strategic Advisories
           </h3>
           
           <div className="grid grid-cols-1 gap-4">
@@ -183,23 +214,28 @@ export default function FinancialInsightsPage() {
                 <CardContent className="flex items-center gap-4 p-6">
                   <CheckCircle2 className="h-8 w-8 text-emerald-500" />
                   <div>
-                    <p className="font-bold text-emerald-900">All Clear</p>
-                    <p className="text-sm text-emerald-700">No critical operational or capital risks detected.</p>
+                    <p className="font-bold text-emerald-900">Guardian Status: Secure</p>
+                    <p className="text-sm text-emerald-700">All vital operational and capital metrics are within optimal parameters.</p>
                   </div>
                 </CardContent>
               </Card>
             ) : (
               insights.map((insight, i) => (
                 <Card key={i} className={cn(
-                  "border-none shadow-md",
-                  insight.level === 'CRITICAL' ? "bg-rose-50 border-rose-100" : 
-                  insight.level === 'WARNING' ? "bg-amber-50 border-amber-100" : 
-                  "bg-blue-50 border-blue-100"
+                  "border-none shadow-md transition-all hover:translate-x-1",
+                  insight.level === 'CRITICAL' ? "bg-rose-50 border-l-4 border-rose-500" : 
+                  insight.level === 'WARNING' ? "bg-amber-50 border-l-4 border-amber-500" : 
+                  "bg-blue-50 border-l-4 border-blue-500"
                 )}>
                   <CardContent className="flex items-start gap-4 p-6">
-                    {insight.level === 'CRITICAL' ? <AlertTriangle className="h-6 w-6 text-rose-500 mt-1" /> :
-                     insight.level === 'WARNING' ? <AlertTriangle className="h-6 w-6 text-amber-500 mt-1" /> :
-                     <Info className="h-6 w-6 text-blue-500 mt-1" />}
+                    <div className={cn(
+                      "mt-1",
+                      insight.level === 'CRITICAL' ? "text-rose-500" : 
+                      insight.level === 'WARNING' ? "text-amber-500" : 
+                      "text-blue-500"
+                    )}>
+                      {getInsightIcon(insight.icon)}
+                    </div>
                     <div>
                       <p className={cn(
                         "font-bold uppercase text-xs tracking-widest mb-1",
@@ -209,7 +245,7 @@ export default function FinancialInsightsPage() {
                       )}>
                         {insight.level} • {insight.type}
                       </p>
-                      <p className="text-slate-800 font-medium">{insight.msg}</p>
+                      <p className="text-slate-800 font-medium leading-relaxed">{insight.msg}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -219,12 +255,12 @@ export default function FinancialInsightsPage() {
 
           <Card className="border-none shadow-lg">
             <CardHeader>
-              <CardTitle className="text-lg">Vital Thresholds</CardTitle>
+              <CardTitle className="text-lg">Vital Threshold Tracking</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-medium">
-                  <span>Runway Buffer (6 Month Target)</span>
+                  <span>Runway Buffer (Target: 6 Months)</span>
                   <span className={metrics.runway < 6 ? "text-rose-500" : "text-emerald-500"}>
                     {metrics.runway.toFixed(1)} Months
                   </span>
@@ -234,7 +270,7 @@ export default function FinancialInsightsPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-sm font-medium">
-                  <span>EBITDA Margin (15% Benchmark)</span>
+                  <span>EBITDA Efficiency (Target: 15%)</span>
                   <span className={metrics.ebitdaMargin < 15 ? "text-amber-500" : "text-emerald-500"}>
                     {metrics.ebitdaMargin.toFixed(1)}%
                   </span>
