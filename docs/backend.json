@@ -1,139 +1,126 @@
 {
   "entities": {
-    "Financial": {
-      "title": "Financial",
+    "Category": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Category",
       "type": "object",
-      "description": "Monthly financial performance data.",
+      "description": "Defines a classification for financial transactions, such as an expense or income type, used for budgeting and tracking across the startup.",
       "properties": {
-        "id": { "type": "string", "description": "YYYY-MM format" },
-        "grossRevenue": { "type": "number" },
-        "discounts": { "type": "number" },
-        "netRevenue": { "type": "number" },
-        "operatingExpenses": { "type": "number" },
-        "cogs": { "type": "number" },
-        "unitsSold": { "type": "number" },
-        "ordersCount": { "type": "number" },
-        "activeClients": { "type": "number" },
-        "totalClients": { "type": "number" },
-        "retainedClients": { "type": "number" },
-        "billableHours": { "type": "number" },
-        "recurringRevenue": { "type": "number" },
-        "oneTimeRevenue": { "type": "number" },
-        "dateRecorded": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Category entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the financial category (e.g., 'Marketing Expenses', 'Salaries', 'Subscription Revenue')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of what this category encompasses, providing clarity for financial reporting."
+        },
+        "type": {
+          "type": "string",
+          "description": "Indicates whether the category is for 'expense' or 'income', helping in financial categorization.",
+          "items": {
+            "type": "string"
+          }
+        }
       },
-      "required": ["id", "grossRevenue", "netRevenue", "operatingExpenses"]
+      "required": [
+        "id",
+        "name",
+        "type"
+      ]
     },
-    "StartupProfile": {
-      "title": "StartupProfile",
+    "Budget": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Budget",
       "type": "object",
+      "description": "Represents a monthly budget set by the startup, serving as a container for individual category budgets for a specific month.",
       "properties": {
-        "name": { "type": "string" },
-        "businessType": { "type": "string", "enum": ["Product", "Service", "Hybrid"] },
-        "industry": { "type": "string" },
-        "teamSize": { "type": "number" },
-        "mission": { "type": "string" },
-        "website": { "type": "string" },
-        "location": { "type": "string" },
-        "governancePin": { "type": "string" }
-      }
-    },
-    "ExpenseCategory": {
-      "title": "ExpenseCategory",
-      "type": "object",
-      "description": "Categories for business expenses.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["Fixed", "Variable", "R&D"] },
-        "color": { "type": "string" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Budget entity."
+        },
+        "month": {
+          "type": "string",
+          "description": "The specific month for which this budget is set (e.g., '2026-03'). The format is YYYY-MM.",
+          "format": "YYYY-MM"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this budget record was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["name", "type"]
+      "required": [
+        "id",
+        "month",
+        "createdAt"
+      ]
     },
-    "Expense": {
-      "title": "Expense",
+    "BudgetCategoryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BudgetCategoryItem",
       "type": "object",
-      "description": "Individual expense records.",
+      "description": "Represents a single budgeted amount for a specific financial category, linked to a particular monthly budget.",
       "properties": {
-        "id": { "type": "string" },
-        "monthId": { "type": "string", "description": "YYYY-MM" },
-        "categoryId": { "type": "string" },
-        "amount": { "type": "number" },
-        "description": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the BudgetCategoryItem entity."
+        },
+        "budgetId": {
+          "type": "string",
+          "description": "Reference to the Budget entity to which this category budget belongs. (Relationship: Budget 1:N BudgetCategoryItem)"
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Reference to the Category entity being budgeted. (Relationship: Category 1:N BudgetCategoryItem)"
+        },
+        "budgetAmount": {
+          "type": "number",
+          "description": "The budgeted monetary amount allocated for this category for the month."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this budget category item was created.",
+          "format": "date-time"
+        }
       },
-      "required": ["monthId", "categoryId", "amount"]
-    },
-    "Leadership": {
-      "title": "Leadership",
-      "type": "object",
-      "description": "Key team members with equity stakes.",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "email": { "type": "string", "format": "email" },
-        "title": { "type": "string" },
-        "responsibility": { "type": "string" },
-        "equityPct": { "type": "number" },
-        "vestingYears": { "type": "number" },
-        "vestingStartDate": { "type": "string", "format": "date" },
-        "vestingEndDate": { "type": "string", "format": "date" },
-        "inviteStatus": { "type": "string", "enum": ["Pending", "Active"] }
-      },
-      "required": ["name", "title", "equityPct"]
-    },
-    "Round": {
-      "title": "Round",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "preMoneyValuation": { "type": "number" },
-        "postMoneyValuation": { "type": "number" },
-        "amountRaised": { "type": "number" },
-        "equityDilutedPct": { "type": "number" },
-        "roundDate": { "type": "string", "format": "date-time" }
-      },
-      "required": ["name", "amountRaised", "equityDilutedPct"]
-    },
-    "Investor": {
-      "title": "Investor",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "roundId": { "type": "string" },
-        "name": { "type": "string" },
-        "investmentAmount": { "type": "number" },
-        "equityPct": { "type": "number" },
-        "tenureYears": { "type": "number" },
-        "dealStartDate": { "type": "string", "format": "date" },
-        "dealEndDate": { "type": "string", "format": "date" },
-        "loyalty": { "type": "boolean" }
-      },
-      "required": ["name", "investmentAmount", "equityPct", "roundId"]
-    },
-    "CapitalStructure": {
-      "title": "CapitalStructure",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "founderPct": { "type": "number" },
-        "esopPct": { "type": "number" },
-        "lastUpdated": { "type": "string", "format": "date-time" }
-      },
-      "required": ["founderPct", "esopPct"]
+      "required": [
+        "id",
+        "budgetId",
+        "categoryId",
+        "budgetAmount",
+        "createdAt"
+      ]
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "financials/{monthId}": { "schema": "Financial", "description": "Monthly financial snapshots." },
-    "startupProfile/main": { "schema": "StartupProfile", "description": "Core startup information." },
-    "expenseCategories/{categoryId}": { "schema": "ExpenseCategory", "description": "Business expense categories." },
-    "expenses/{expenseId}": { "schema": "Expense", "description": "Individual expense tracking entries." },
-    "leadership/{memberId}": { "schema": "Leadership", "description": "Core team equity tracking." },
-    "rounds/{roundId}": { "schema": "Round", "description": "Funding round history." },
-    "investors/{investorId}": { "schema": "Investor", "description": "Investor cap table entries." },
-    "capitalStructure/main": { "schema": "CapitalStructure", "description": "Global cap table settings." }
+    "structure": [
+      {
+        "path": "budgets/{budgetMonthId}",
+        "definition": {
+          "entityName": "Budget",
+          "schema": {
+            "$ref": "#/backend/entities/Budget"
+          },
+          "description": "Collection storing monthly budget documents. Each document's ID is the YYYY-MM string (e.g., '2026-03') for the month it represents. This document includes an embedded array 'categoryBudgets', where each item within the array conforms to the structure of the BudgetCategoryItem entity, allowing for atomic updates and authorization independence.",
+          "params": [
+            {
+              "name": "budgetMonthId",
+              "description": "The month in YYYY-MM format (e.g., '2026-03') for which the budget is set, serving as the document ID."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for the 'Budget vs Actual' blueprint prioritizes Authorization Independence and Structural Segregation to ensure robust, debuggable security rules and efficient data access. The core design revolves around a top-level collection: `/budgets/{budgetMonthId}`. Each document in this collection represents the complete budget for a specific month. The document ID itself will be the `YYYY-MM` string (e.g., '2026-03'), which aligns directly with the 'month' field within the document and simplifies data retrieval.\n\n**Authorization Independence:** This is achieved by embedding the `BudgetCategoryItem` data directly within the `Budget` document as an array named `categoryBudgets`. Since all category-specific budget amounts for a given month are part of a single `Budget` document, authorization rules only need to be applied at the `/budgets/{budgetMonthId}` level. This eliminates the need for `get()` calls in security rules to check parent document permissions for subcollection items, allowing for atomic create/update operations on an entire monthly budget and significantly simplifying rule logic. The `Budget` document will contain all necessary authorization context, such as a denormalized `ownerId` or `members` map, if multi-tenancy or fine-grained per-budget access were required. For the current scope, it's assumed all authenticated 'founders' (determined by a global role) can manage all budget documents.\n\n**Structural Segregation & QAPs (Rules are not Filters):** All documents within the `/budgets` collection share a homogeneous security posture: they are monthly budget records accessible by authorized startup personnel. This segregation ensures that security rules applied to this collection are straightforward and consistent across all its documents. For `list` operations (Query-Allowed Paths), a founder can securely query the `/budgets` collection to retrieve all monthly budget documents. Since authorization is handled at the document level (e.g., `allow read, write: if request.auth.uid != null && exists(/databases/$(database)/documents/roles_founder/$(request.auth.uid));`), the `list` operation will only return documents that the user is authorized to read, without needing complex filtering logic within the rules themselves. The embedded `categoryBudgets` array further simplifies this, as a single read operation for a monthly budget retrieves all its constituent category budgets securely and efficiently."
   }
 }
