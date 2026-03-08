@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -151,7 +150,7 @@ export const calculateBudgetVariance = (actualAmount: number, budgetAmount: numb
   return {
     variance,
     variancePct: variancePct.toFixed(1),
-    status: variance > 0 ? "OVER" : variance < 0 ? "UNDER" : "ON_TRACK"
+    status: variance > 0 ? "OVER" : (variance < 0 && Math.abs(variancePct) > 1) ? "UNDER" : "ON_TRACK"
   };
 };
 
