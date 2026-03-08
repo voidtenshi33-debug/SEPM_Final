@@ -28,7 +28,6 @@ export function AddFinancialsModal() {
 
     const financialData = {
       id: monthId,
-      month: monthId,
       grossRevenue: netRevenue,
       discounts: 0,
       netRevenue: netRevenue,
@@ -53,7 +52,7 @@ export function AddFinancialsModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-accent hover:bg-accent/90 text-white font-bold shadow-lg shadow-accent/20">
+        <Button className="bg-[#3B82F6] hover:bg-blue-700 text-white font-bold shadow-lg">
           <Plus className="h-4 w-4 mr-2" /> Log Monthly Data
         </Button>
       </DialogTrigger>
@@ -61,7 +60,7 @@ export function AddFinancialsModal() {
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-accent" />
+              <Wallet className="h-5 w-5 text-[#3B82F6]" />
               Record Monthly Performance
             </DialogTitle>
           </DialogHeader>
@@ -136,7 +135,7 @@ export function AddFinancialsModal() {
             )}
           </div>
           <DialogFooter className="mt-4">
-            <Button type="submit" className="bg-accent hover:bg-accent/90 w-full font-bold">
+            <Button type="submit" className="bg-[#3B82F6] hover:bg-blue-700 w-full font-bold">
               Save Monthly Records
             </Button>
           </DialogFooter>

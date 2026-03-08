@@ -79,7 +79,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
             snapshot.docs.forEach(async (d) => {
               await updateDoc(doc(firestore, "leadership", d.id), {
                 id: firebaseUser.uid, // Map actual Auth UID
-                inviteStatus: "Accepted"
+                inviteStatus: "Active" // Updated to match latest backend schema
               });
             });
           }

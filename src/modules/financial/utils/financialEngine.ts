@@ -196,22 +196,21 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
   // 1. Create Lookup Map
   const catMap = globalCategories.reduce((acc, cat) => ({ 
     ...acc, 
-    [cat.id]: { name: cat.name, type: cat.type, color: cat.color || "#3B82F6" } 
-  }), {} as Record<string, { name: string, type: string, color: string }>);
+    [cat.id]: { name: cat.name, type: cat.type } 
+  }), {} as Record<string, { name: string, type: string }>);
 
   // 2. Aggregate
   const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   
   const grouped = monthlyExpenses.reduce((acc, exp) => {
     const categoryId = exp.categoryId;
-    const cat = catMap[categoryId] || { name: "Other", type: "Variable", color: "#94A3B8" };
+    const cat = catMap[categoryId] || { name: "Other", type: "Variable" };
     
     if (!acc[categoryId]) {
       acc[categoryId] = { 
         id: categoryId,
         name: cat.name, 
         type: cat.type, 
-        color: cat.color,
         amount: 0, 
         percentage: 0 
       };
