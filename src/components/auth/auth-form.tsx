@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -28,6 +27,7 @@ export function AuthForm() {
     } catch (err) {
       toast({ title: "Authentication Request Failed", variant: "destructive" });
     } finally {
+      // Small delay to allow the auth listener to pick up the state change
       setTimeout(() => setLoading(false), 1500);
     }
   };
@@ -52,8 +52,8 @@ export function AuthForm() {
     <div className="w-full text-white">
       <Tabs defaultValue="login" className="space-y-8">
         <TabsList className="grid w-full grid-cols-2 bg-white/5 p-1 rounded-xl border border-white/10">
-          <TabsTrigger value="login" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">Login</TabsTrigger>
-          <TabsTrigger value="signup" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all">Join</TabsTrigger>
+          <TabsTrigger value="login" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all text-slate-400">Login</TabsTrigger>
+          <TabsTrigger value="signup" className="rounded-lg py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all text-slate-400">Join</TabsTrigger>
         </TabsList>
         
         <TabsContent value="login" className="space-y-6 animate-in fade-in duration-300">

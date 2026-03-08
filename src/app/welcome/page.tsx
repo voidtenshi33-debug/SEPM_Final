@@ -1,4 +1,3 @@
-
 "use client"
 
 import React, { useState } from "react"
@@ -9,12 +8,13 @@ import { AuthForm } from "@/components/auth/auth-form"
 import { Button } from "@/components/ui/button"
 
 export default function WelcomePage() {
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
   const router = useRouter();
   const [isLaunching, setIsLaunching] = useState(false);
 
   const handleLaunch = () => {
     setIsLaunching(true);
+    // Explicitly push to dashboard only when user clicks
     router.push("/");
   };
 
