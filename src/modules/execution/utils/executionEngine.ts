@@ -48,10 +48,11 @@ export const calculateProjectHealth = (
 
   // 4. Weekly Consistency (25%)
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  // Using createdAt as a proxy for last activity in this prototype
+  // Using createdAt/updatedAt as a proxy for last activity
   const tasksWithRecentUpdates = tasks.filter(t => {
     const lastActive = t.updatedAt || t.createdAt;
-    return lastActive && new Date(lastActive.seconds ? lastActive.seconds * 1000 : lastActive) > sevenDaysAgo;
+    const date = lastActive?.toDate ? lastActive.toDate() : new Date(lastActive);
+    return lastActive && date > sevenDaysAgo;
   }).length;
   const consistencyScore = tasks.length > 0 ? (tasksWithRecentUpdates / tasks.length) * 100 : 100;
 
@@ -94,8 +95,10 @@ export const calculateMemberPerformance = (tasks: any[]) => {
 
   const completed = tasks.filter(t => t.status === 'Completed');
   const onTime = completed.filter(t => {
-    if (!t.completedAt || !t.deadline) return true; // Assume on-time if no data
-    return new Date(t.completedAt) <= new Date(t.deadline);
+    if (!t.completedAt || !t.deadline) return true; // Assume on-time if no completion data
+    const compDate = t.completedAt?.toDate ? t.completedAt.toDate() : new Date(t.completedAt);
+    const deadlineDate = new Date(t.deadline);
+    return compDate <= deadlineDate;
   });
   
   const completionRate = (completed.length / tasks.length) * 100;
@@ -127,7 +130,7 @@ export const getStrategicRecommendations = (profile: any, financials: any[]) => 
     suggestions.push({
       id: 'FUNDRAISING_STRAT',
       title: "Aggressive Runway Extension",
-      reason: "Liquidity risk detected. Current burn will deplete cash in < 6 months.",
+      why: "Liquidity risk detected. Current burn will deplete cash in < 6 months.",
       action: "Start Series A/Seed Round",
       impact: "Critical",
       type: "Fundraising",
@@ -139,7 +142,7 @@ export const getStrategicRecommendations = (profile: any, financials: any[]) => 
     suggestions.push({
       id: 'SUB_MODEL',
       title: "Subscription Model Pivot",
-      reason: "Stagnant transactional revenue detected over last period.",
+      why: "Stagnant transactional revenue detected over last period.",
       action: "Launch Subscription Project",
       impact: "High",
       type: "Product",
@@ -151,7 +154,7 @@ export const getStrategicRecommendations = (profile: any, financials: any[]) => 
     suggestions.push({
       id: 'RETAINER_GTM',
       title: "Retainer-Based Transition",
-      reason: "High dependence on one-time service deals detected.",
+      why: "High dependence on one-time service deals detected.",
       action: "Launch Retainer GTM",
       impact: "Medium",
       type: "Marketing",
@@ -167,24 +170,24 @@ export const getStrategicRecommendations = (profile: any, financials: any[]) => 
  */
 export const TASK_TEMPLATES = {
   FUNDRAISING: [
-    { title: 'Pitch Deck Preparation', priority: 'High', impactType: 'Fundraising', status: 'Todo' },
-    { title: 'Investor CRM Setup', priority: 'Medium', impactType: 'Fundraising', status: 'Todo' },
-    { title: 'Data Room Organization', priority: 'High', impactType: 'Finance', status: 'Todo' },
-    { title: 'Founder Pitch Rehearsal', priority: 'High', impactType: 'Operations', status: 'Todo' },
-    { title: 'Investor Outreach Phase 1', priority: 'Medium', impactType: 'Growth', status: 'Todo' }
+    { title: 'Pitch Deck Preparation', priority: 'High', impactType: 'Fundraising' },
+    { title: 'Investor CRM Setup', priority: 'Medium', impactType: 'Fundraising' },
+    { title: 'Data Room Organization', priority: 'High', impactType: 'Finance' },
+    { title: 'Founder Pitch Rehearsal', priority: 'High', impactType: 'Operations' },
+    { title: 'Investor Outreach Phase 1', priority: 'Medium', impactType: 'Growth' }
   ],
   PRODUCT_LAUNCH: [
-    { title: 'Beta Testing Group', priority: 'High', impactType: 'Product', status: 'Todo' },
-    { title: 'Marketing Landing Page', priority: 'Medium', impactType: 'Growth', status: 'Todo' },
-    { title: 'Architecture Review', priority: 'High', impactType: 'Product', status: 'Todo' },
-    { title: 'Final QA Sprint', priority: 'High', impactType: 'Product', status: 'Todo' },
-    { title: 'Launch Press Release', priority: 'Medium', impactType: 'Growth', status: 'Todo' }
+    { title: 'Beta Testing Group', priority: 'High', impactType: 'Product' },
+    { title: 'Marketing Landing Page', priority: 'Medium', impactType: 'Growth' },
+    { title: 'Architecture Review', priority: 'High', impactType: 'Product' },
+    { title: 'Final QA Sprint', priority: 'High', impactType: 'Product' },
+    { title: 'Launch Press Release', priority: 'Medium', impactType: 'Growth' }
   ],
   MARKETING: [
-    { title: 'Strategy Planning', priority: 'High', impactType: 'Growth', status: 'Todo' },
-    { title: 'Ad Creative Design', priority: 'Medium', impactType: 'Growth', status: 'Todo' },
-    { title: 'Campaign Launch', priority: 'High', impactType: 'Growth', status: 'Todo' },
-    { title: 'ROI Analysis', priority: 'Medium', impactType: 'Finance', status: 'Todo' }
+    { title: 'Strategy Planning', priority: 'High', impactType: 'Growth' },
+    { title: 'Ad Creative Design', priority: 'Medium', impactType: 'Growth' },
+    { title: 'Campaign Launch', priority: 'High', impactType: 'Growth' },
+    { title: 'ROI Analysis', priority: 'Medium', impactType: 'Finance' }
   ]
 };
 
