@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -48,9 +49,9 @@ export const calculateProjectHealth = (
 
   // 4. Weekly Consistency (25%)
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  // Using createdAt/updatedAt as a proxy for last activity
+  // Using lastUpdateAt as a proxy for last activity
   const tasksWithRecentUpdates = tasks.filter(t => {
-    const lastActive = t.updatedAt || t.createdAt;
+    const lastActive = t.lastUpdateAt || t.createdAt;
     const date = lastActive?.toDate ? lastActive.toDate() : new Date(lastActive);
     return lastActive && date > sevenDaysAgo;
   }).length;
@@ -157,7 +158,7 @@ export const getStrategicRecommendations = (profile: any, financials: any[]) => 
       why: "High dependence on one-time service deals detected.",
       action: "Launch Retainer GTM",
       impact: "Medium",
-      type: "Marketing",
+      type: "Growth",
       template: "MARKETING"
     });
   }

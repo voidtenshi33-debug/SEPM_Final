@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from "react";
@@ -17,7 +18,8 @@ import {
   Loader2,
   Briefcase,
   Layout,
-  AlertOctagon
+  AlertOctagon,
+  ArrowRight
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +27,8 @@ import { AddProjectModal } from "@/components/projects/add-project-modal";
 import { TaskBoard } from "@/components/projects/task-board";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatINR } from "@/modules/financial/utils/financialEngine";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function ProjectsPage() {
   const db = useFirestore();
@@ -72,7 +76,7 @@ export default function ProjectsPage() {
               const health = calculateProjectHealth(project, projectTasks, expenses || []);
 
               return (
-                <Card key={project.id} className="border-none shadow-xl hover:shadow-2xl transition-all group relative overflow-hidden">
+                <Card key={project.id} className="border-none shadow-xl hover:shadow-2xl transition-all group relative overflow-hidden flex flex-col">
                   <div className={`absolute top-0 left-0 w-1 h-full ${
                     health.status === 'Delayed' ? 'bg-rose-500' : 
                     health.status === 'At Risk' ? 'bg-amber-500' : 
@@ -98,7 +102,7 @@ export default function ProjectsPage() {
                       {project.description || "No strategic description provided."}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-6 flex-1">
                     {/* Execution Bars */}
                     <div className="space-y-4">
                       <div className="space-y-1.5">
@@ -137,6 +141,14 @@ export default function ProjectsPage() {
                           <Clock className="h-3 w-3" /> {new Date(project.targetEndDate).toLocaleDateString()}
                         </span>
                       </div>
+                    </div>
+                    
+                    <div className="pt-4">
+                      <Button asChild variant="outline" className="w-full text-accent border-accent hover:bg-accent hover:text-white group">
+                        <Link href={`/projects/${project.id}`}>
+                          Project Hub <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                        </Link>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

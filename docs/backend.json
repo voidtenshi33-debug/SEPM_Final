@@ -159,7 +159,9 @@
         "budgetUsed": { "type": "number" },
         "targetEndDate": { "type": "string", "format": "date" },
         "status": { "type": "string", "enum": ["Active", "Delayed", "At Risk", "Completed"] },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "expectedROI": { "type": "string" },
+        "alignmentScore": { "type": "number" }
       },
       "required": ["name", "budgetAllocated", "targetEndDate"]
     },
@@ -173,7 +175,12 @@
         "status": { "type": "string", "enum": ["Todo", "In Progress", "Completed"] },
         "deadline": { "type": "string", "format": "date" },
         "assignedTo": { "type": "string" },
-        "bonusEligible": { "type": "boolean" }
+        "bonusEligible": { "type": "boolean" },
+        "priority": { "type": "string" },
+        "impactType": { "type": "string" },
+        "estimatedHours": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "lastUpdateAt": { "type": "string", "format": "date-time" }
       },
       "required": ["projectId", "title", "status"]
     },
@@ -184,8 +191,8 @@
         "id": { "type": "string" },
         "taskId": { "type": "string" },
         "content": { "type": "string" },
-        "author": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" }
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
       }
     }
   },
@@ -204,6 +211,6 @@
     "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." },
     "projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
     "tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
-    "weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log." }
+    "tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." }
   }
 }

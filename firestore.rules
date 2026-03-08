@@ -83,12 +83,12 @@ service cloud.firestore {
       allow get, list: if isSignedIn();
       allow create: if isSignedIn();
       allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /weeklyUpdates/{updateId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
+      
+      match /weeklyUpdates/{updateId} {
+        allow get, list: if isSignedIn();
+        allow create: if isSignedIn();
+        allow update, delete: if isExistingUserAuthorized();
+      }
     }
   }
 }
