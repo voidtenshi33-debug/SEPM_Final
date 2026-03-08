@@ -29,12 +29,19 @@
       "type": "object",
       "properties": {
         "name": { "type": "string" },
+        "legalName": { "type": "string" },
+        "foundingDate": { "type": "string", "format": "date" },
         "businessType": { "type": "string", "enum": ["Product", "Service", "Hybrid"] },
         "industry": { "type": "string" },
+        "fundingStage": { "type": "string", "enum": ["Bootstrapped", "Pre-Seed", "Seed", "Series A", "Series B+"] },
+        "revenueModel": { "type": "string", "enum": ["Subscription", "Marketplace", "Transactional", "Ad-Based", "Enterprise"] },
         "teamSize": { "type": "number" },
         "mission": { "type": "string" },
+        "vision": { "type": "string" },
         "website": { "type": "string" },
+        "linkedInUrl": { "type": "string" },
         "location": { "type": "string" },
+        "techStack": { "type": "string" },
         "governancePin": { "type": "string", "description": "A 4-digit secret PIN for sensitive financial operations." }
       }
     },
