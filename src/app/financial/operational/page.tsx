@@ -10,7 +10,8 @@ import {
   calcEBITDA, 
   calcEBITDAMargin, 
   calculateRunway, 
-  formatINR 
+  formatINR,
+  getMonthlyDistribution
 } from "@/modules/financial/utils/financialEngine";
 import { 
   LineChart, 
@@ -36,6 +37,7 @@ import {
   Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { AddExpenseModal } from "@/components/financials/add-expense-modal";
 
 const CHART_COLORS = ['#0F172A', '#3B82F6', '#6366F1', '#10B981', '#F59E0B', '#EC4899', '#8B5CF6'];
 
@@ -67,7 +69,7 @@ export default function OperationalPage() {
   const prevOpEx = prevMonth?.operatingExpenses || 0;
   const prevEbitda = calcEBITDA(prevNetRev, prevOpEx);
 
-  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash
+  const runway = calculateRunway(42000000, opEx); // Mock ₹4.2Cr cash for prototype
 
   // Fetch individual expenses for the current month distribution
   const currentMonthId = currentMonth?.month || '';
@@ -79,27 +81,7 @@ export default function OperationalPage() {
 
   // Process Distribution Data
   const distributionData = React.useMemo(() => {
-    if (!expenses || !categories) return [];
-    
-    const categoryTotals: Record<string, { amount: number; name: string; type: string }> = {};
-    let total = 0;
-
-    expenses.forEach(exp => {
-      const cat = categories.find(c => c.id === exp.categoryId);
-      const catName = cat?.name || 'Uncategorized';
-      const catType = cat?.type || 'Variable';
-      
-      if (!categoryTotals[catName]) {
-        categoryTotals[catName] = { amount: 0, name: catName, type: catType };
-      }
-      categoryTotals[catName].amount += exp.amount;
-      total += exp.amount;
-    });
-
-    return Object.values(categoryTotals).map(item => ({
-      ...item,
-      percentage: total > 0 ? (item.amount / total) * 100 : 0
-    })).sort((a, b) => b.amount - a.amount);
+    return getMonthlyDistribution(expenses, categories);
   }, [expenses, categories]);
 
   const fixedVsVariable = React.useMemo(() => {
@@ -113,7 +95,7 @@ export default function OperationalPage() {
     expenses: f.operatingExpenses,
   })).reverse() || [];
 
-  if (loadingFin) {
+  if (loadingFin || !mounted) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -140,7 +122,7 @@ export default function OperationalPage() {
           <CardContent className="p-6">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</p>
             <p className="text-3xl font-bold font-headline">{formatINR(opEx)}</p>
-            <div className="flex items-center text-[10px] text-rose-600 mt-2 font-bold uppercase">
+            <div className="flex items-center text-[10px] text-rose-600 mt-2 font-bold uppercase tracking-widest">
                <TrendingUp className="h-3 w-3 mr-1" /> Variable Risk
             </div>
           </CardContent>
@@ -183,21 +165,19 @@ export default function OperationalPage() {
             <CardDescription>Historical performance trend in INR (₹)</CardDescription>
           </CardHeader>
           <CardContent className="h-[400px] p-6 pt-0">
-            {mounted ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(v) => `₹${(v/100000).toFixed(1)}L`} />
-                  <Tooltip 
-                    formatter={(value: number) => formatINR(value)}
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}
-                  />
-                  <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={4} dot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} name="Net Revenue" />
-                  <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 6, fill: '#0F172A', strokeWidth: 2, stroke: '#fff' }} name="OpEx" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : null}
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(v) => `₹${(v/100000).toFixed(1)}L`} />
+                <Tooltip 
+                  formatter={(value: number) => formatINR(value)}
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 50px rgba(0,0,0,0.1)' }}
+                />
+                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={4} dot={{ r: 6, fill: '#3B82F6', strokeWidth: 2, stroke: '#fff' }} name="Net Revenue" />
+                <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 6, fill: '#0F172A', strokeWidth: 2, stroke: '#fff' }} name="OpEx" />
+              </LineChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -237,6 +217,7 @@ export default function OperationalPage() {
         </div>
       </div>
 
+      {/* Expense Distribution Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="border-none shadow-xl">
           <CardHeader>
@@ -247,7 +228,7 @@ export default function OperationalPage() {
             <CardDescription>Current period distribution by classification</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
-            {mounted && distributionData.length > 0 ? (
+            {distributionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -270,9 +251,10 @@ export default function OperationalPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl text-slate-400">
-                <LayoutList className="h-10 w-10 mb-2 opacity-20" />
-                <p className="text-sm font-medium italic">Log categorical expenses to unlock insights</p>
+              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl text-slate-400 text-center p-8">
+                <PieIcon className="h-10 w-10 mb-2 opacity-20" />
+                <p className="text-sm font-medium mb-4 italic">No categorical spend detected for {currentMonthId || 'Current period'}</p>
+                <AddExpenseModal categories={categories || []} />
               </div>
             )}
           </CardContent>
