@@ -8,7 +8,7 @@ import {
   calcEBITDA, 
   calcEBITDAMargin, 
   calculateRunway, 
-  formatINR
+  formatINR 
 } from "@/modules/financial/utils/financialEngine";
 import { 
   LineChart, 
@@ -26,12 +26,9 @@ import {
   Activity, 
   Wallet, 
   AlertCircle,
-  Loader2,
-  Zap
+  Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { AddExpenseModal } from "@/components/financials/add-expense-modal";
-import Link from "next/link";
 
 export default function OperationalPage() {
   const [mounted, setMounted] = useState(false);
@@ -39,16 +36,13 @@ export default function OperationalPage() {
   
   // Data subscriptions
   const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('month', 'desc'), limit(12)), [db]);
-  const catQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
-
-  const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
-  const { data: categories } = useCollection(catQuery);
+  const { data: financials, isLoading } = useCollection(finQuery);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (loadingFin) {
+  if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -64,7 +58,6 @@ export default function OperationalPage() {
   const opEx = currentMonthRecord?.operatingExpenses || 0;
   const ebitda = calcEBITDA(netRev, opEx);
   const margin = calcEBITDAMargin(ebitda, netRev);
-  const isProfitable = ebitda > 0;
   
   const prevNetRev = prevMonthRecord?.netRevenue || 0;
   const prevOpEx = prevMonthRecord?.operatingExpenses || 0;
@@ -80,11 +73,6 @@ export default function OperationalPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h2 className="text-2xl font-bold font-headline tracking-tight">Operational Profitability</h2>
-        <AddExpenseModal categories={categories || []} />
-      </div>
-
       {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-none shadow-xl bg-primary text-primary-foreground">
@@ -139,20 +127,10 @@ export default function OperationalPage() {
       <Card className="border-none shadow-xl bg-white">
         <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <Activity className="h-5 w-5 text-accent" />
-                Burn vs. Revenue Intelligence
-              </CardTitle>
-              {currentMonthRecord && (
-                <Badge 
-                  variant={isProfitable ? "outline" : "destructive"} 
-                  className={isProfitable ? "bg-emerald-50 text-emerald-700 border-emerald-200 uppercase text-[10px] font-bold" : "uppercase text-[10px] font-bold"}
-                >
-                  {isProfitable ? "Operating Positive" : "Burning Cash"}
-                </Badge>
-              )}
-            </div>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-accent" />
+              Burn vs. Revenue Intelligence
+            </CardTitle>
             <CardDescription>Historical performance in INR (₹)</CardDescription>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -176,7 +154,7 @@ export default function OperationalPage() {
                   axisLine={false} 
                   tickLine={false} 
                   tick={{fill: '#64748B', fontSize: 11, fontWeight: 500}} 
-                  tickFormatter={(v) => formatINR(v)} 
+                  tickFormatter={(v) => `₹${(v/100000).toFixed(1)}L`} 
                 />
                 <Tooltip 
                   formatter={(value: number) => [formatINR(value), ""]}
@@ -213,48 +191,25 @@ export default function OperationalPage() {
       </Card>
 
       {/* Insight Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="border-none shadow-lg bg-accent/5 border border-accent/10">
-          <CardContent className="p-6 flex items-start gap-4">
-             <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
-                <AlertCircle className="h-6 w-6 text-accent" />
-             </div>
-             <div>
-                <h4 className="font-bold text-slate-900 mb-1 font-headline">Guardian Intelligence</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed italic">
-                  {!currentMonthRecord ? (
-                    "No data available for the current period. Please log your first operational record to enable intelligence tracking."
-                  ) : margin < 15 && margin > 0 ? (
-                    "Efficiency Alert: Your EBITDA Margin is below 15%. Direct focus to variable OpEx optimization."
-                  ) : margin >= 15 ? (
-                    "Sustainable Growth: Your business model supports scaling. Current efficiency is healthy."
-                  ) : (
-                    "Critical: Operational burn detected. Revisit your pricing model or unit economics immediately."
-                  )}
-                </p>
-             </div>
-          </CardContent>
-        </Card>
-
-        <Link href="/financial/categories">
-          <Card className="border-none shadow-lg bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group h-full border border-slate-200">
-            <CardContent className="p-6 flex items-start gap-4">
-               <div className="h-12 w-12 rounded-2xl bg-white flex items-center justify-center shrink-0 shadow-sm">
-                  <Zap className="h-6 w-6 text-accent" />
-               </div>
-               <div className="flex-1">
-                  <div className="flex justify-between items-center mb-1">
-                    <h4 className="font-bold text-slate-900 font-headline">Distribution Audit</h4>
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-widest bg-accent/5 px-2 py-1 rounded">View Analysis</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Audit exactly where your capital is deployed across Fixed vs. Variable cost buckets.
-                  </p>
-               </div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
+      <Card className="border-none shadow-lg bg-accent/5 border border-accent/10">
+        <CardContent className="p-6 flex items-start gap-4">
+           <div className="h-12 w-12 rounded-2xl bg-accent/10 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-6 w-6 text-accent" />
+           </div>
+           <div>
+              <h4 className="font-bold text-slate-900 mb-1 font-headline">Guardian Intelligence</h4>
+              <p className="text-sm text-muted-foreground leading-relaxed italic">
+                {margin < 15 && margin > 0 ? (
+                  "Efficiency Alert: Your EBITDA Margin is below 15%. Direct focus to variable OpEx optimization to stabilize unit economics for the next scaling phase."
+                ) : margin >= 15 ? (
+                  "Sustainable Growth: Your business model supports scaling. Current efficiency is healthy and trending towards institutional investment benchmarks."
+                ) : (
+                  "No historical records found for the current period. Log your first monthly data to enable Guardian Intelligence tracking."
+                )}
+              </p>
+           </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

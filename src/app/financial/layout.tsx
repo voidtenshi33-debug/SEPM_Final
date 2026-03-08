@@ -40,23 +40,19 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
       {/* Sub-Navigation Tabs */}
       <div className="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl w-fit overflow-x-auto no-scrollbar">
         {subNavItems.map((item) => {
-          // Check if exactly active or if it's a nested path under the current item
-          const isActive = pathname === item.href;
-          const isNested = pathname.startsWith(item.href) && item.href !== '/financial';
-          const active = isActive || isNested;
-
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
                 "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-lg whitespace-nowrap",
-                active 
+                isActive 
                   ? "bg-white text-[#3B82F6] shadow-sm" 
                   : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
               )}
             >
-              <item.icon className={cn("h-4 w-4", active ? "text-[#3B82F6]" : "text-slate-400")} />
+              <item.icon className={cn("h-4 w-4", isActive ? "text-[#3B82F6]" : "text-slate-400")} />
               {item.name}
             </Link>
           );
