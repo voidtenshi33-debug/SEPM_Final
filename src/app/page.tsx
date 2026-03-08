@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -18,7 +17,8 @@ import {
   Sparkles,
   ShieldCheck,
   Target,
-  FileText
+  FileText,
+  AlertTriangle
 } from "lucide-react";
 import { formatINR, calculateRunway, calcEBITDA } from "@/modules/financial/utils/financialEngine";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
@@ -62,54 +62,59 @@ export default function DashboardPage() {
     );
   }
 
-  // Calculate Metrics
+  // Real Metrics Calculation
   const currentMRR = latestMonth?.netRevenue || 0;
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const runway = calculateRunway(42000000, currentBurn); // Mock cash balance
+  
+  // Real Runway (Fallback to 0 if no burn data)
+  const runway = currentBurn > 0 ? calculateRunway(1000000, currentBurn) : 99; // Mock initial cash ₹10L for prototype context
   const teamSize = leadership?.length || 0;
   
   const activeProjects = projects?.filter(p => p.status === 'Active') || [];
   const nearingCompletion = projects?.filter(p => {
-    const projectTasks = tasks?.filter(t => t.projectId === p.id) || [];
-    const health = calculateProjectHealth(p, projectTasks, expenses || []);
+    const pTasks = tasks?.filter(t => t.projectId === p.id) || [];
+    const health = calculateProjectHealth(p, pTasks, expenses || []);
     return health.progressPct > 70 && health.progressPct < 100;
   }).length || 0;
 
-  const chartData = [...financials].reverse().map(f => ({
-    month: f.id,
-    revenue: f.netRevenue,
-    ebitda: calcEBITDA(f.netRevenue, f.operatingExpenses)
-  }));
+  const chartData = financials.length > 0 
+    ? [...financials].reverse().map(f => ({
+        month: f.id,
+        revenue: f.netRevenue,
+        ebitda: calcEBITDA(f.netRevenue, f.operatingExpenses)
+      }))
+    : [{ month: 'No Data', revenue: 0, ebitda: 0 }];
 
   const stats = [
     {
       title: "Cash Runway",
-      value: runway >= 99 ? "∞ Months" : `${runway} Months`,
-      description: "Critical threshold: 6 months",
+      value: runway >= 99 ? "∞ Months" : `${runway} Mo`,
+      description: currentBurn > 0 ? `Burn: ${formatINR(currentBurn)}/mo` : "No burn detected",
       icon: Clock,
       color: "text-blue-600",
-      bg: "bg-blue-50"
+      bg: "bg-blue-50",
+      alert: runway < 6 && currentBurn > 0
     },
     {
-      title: "Team Size",
+      title: "Active Team",
       value: teamSize.toString(),
-      description: "Active leadership members",
+      description: "Leadership members",
       icon: Users,
       color: "text-indigo-600",
       bg: "bg-indigo-50"
     },
     {
-      title: "Active Projects",
+      title: "Active Strategy",
       value: activeProjects.length.toString(),
       description: `${nearingCompletion} nearing completion`,
-      icon: Briefcase,
+      icon: Target,
       color: "text-emerald-600",
       bg: "bg-emerald-50"
     },
     {
       title: "Monthly Revenue",
       value: formatINR(currentMRR),
-      description: "Updated this period",
+      description: latestMonth ? `Updated: ${latestMonth.id}` : "No revenue logged",
       icon: TrendingUp,
       color: "text-blue-600",
       bg: "bg-blue-50"
@@ -120,7 +125,7 @@ export default function DashboardPage() {
     <div className="space-y-8 animate-in fade-in duration-700 pb-20">
       <PageHeader 
         title="Command Center" 
-        description="Unified oversight of your startup's execution, financial health, and strategic roadmap."
+        description="Data-driven oversight of your startup's execution, financial health, and strategic growth."
         actions={
           <div className="flex gap-2">
             <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-white" asChild>
@@ -137,10 +142,9 @@ export default function DashboardPage() {
         }
       />
 
-      {/* KPI Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat) => (
-          <Card key={stat.title} className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 group">
+          <Card key={stat.title} className={`border-none shadow-xl hover:shadow-2xl transition-all duration-300 group ${stat.alert ? 'bg-rose-50' : 'bg-white'}`}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className={`p-3 rounded-2xl ${stat.bg} group-hover:scale-110 transition-transform`}>
@@ -153,7 +157,10 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.title}</p>
                 <p className="text-3xl font-bold text-[#0F172A] font-headline">{stat.value}</p>
-                <p className="text-[10px] text-slate-400 font-medium italic">{stat.description}</p>
+                <div className="flex items-center gap-1">
+                  {stat.alert && <AlertTriangle className="h-3 w-3 text-rose-500" />}
+                  <p className={`text-[10px] font-bold uppercase tracking-tight ${stat.alert ? 'text-rose-600' : 'text-slate-400'}`}>{stat.description}</p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -161,7 +168,6 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Growth Chart */}
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-xl overflow-hidden bg-white">
             <CardHeader className="border-b border-slate-50 pb-6">
@@ -171,12 +177,12 @@ export default function DashboardPage() {
                     <Activity className="h-5 w-5 text-accent" />
                     Revenue Velocity
                   </CardTitle>
-                  <CardDescription>Historical growth performance in INR (₹)</CardDescription>
+                  <CardDescription>Performance trend from logged monthly data.</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-6 h-[350px]">
-              {mounted ? (
+              {mounted && financials.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData}>
                     <defs>
@@ -213,7 +219,15 @@ export default function DashboardPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              ) : null}
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-xl border-2 border-dashed">
+                  <Activity className="h-10 w-10 mb-2 opacity-20" />
+                  <p className="text-sm font-medium">Log your first month of revenue to view trends.</p>
+                  <Button variant="link" asChild className="text-accent font-bold mt-2">
+                    <Link href="/financial/operational">Go to Ledger</Link>
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -225,18 +239,18 @@ export default function DashboardPage() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-accent" />
-                  AI Growth Insight
+                  Growth Intelligence
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="p-4 rounded-xl bg-white/10 border border-white/20 backdrop-blur-sm">
                   <p className="text-sm italic leading-relaxed">
-                    "Strategic advice: Based on current maturity, an <strong>Enterprise Sales Blitz</strong> is recommended to scale revenue with low risk."
+                    {latestMonth ? "Analyzing revenue composition... Conversion models ready." : "Setup profile and log metrics to activate AI Expansion Modeling."}
                   </p>
                 </div>
                 <Button variant="secondary" className="w-full font-bold group" asChild>
                   <Link href="/ai-growth">
-                    Open Growth Intelligence
+                    Open Strategy Engine
                     <TrendingUp className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </Button>
@@ -247,53 +261,45 @@ export default function DashboardPage() {
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                   <FileText className="h-4 w-4 text-accent" />
-                  Vault Status
+                  Audit Vault
                 </CardTitle>
-                <Link href="/documents" className="text-[10px] font-bold text-accent hover:underline">Manage All</Link>
+                <Link href="/documents" className="text-[10px] font-bold text-accent hover:underline">Vault Hub</Link>
               </CardHeader>
               <CardContent className="space-y-3 pt-2">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-xs font-medium text-slate-700">Growth Brief.pdf</span>
-                  </div>
-                  <Badge className="bg-emerald-50 text-emerald-600 border-none text-[8px]">SECURE</Badge>
-                </div>
-                <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-3.5 w-3.5 text-slate-400" />
-                    <span className="text-xs font-medium text-slate-700">Cap Table V4.xlsx</span>
-                  </div>
-                  <Badge className="bg-amber-50 text-amber-600 border-none text-[8px]">LOCKED</Badge>
-                </div>
+                <p className="text-[10px] text-slate-500 italic">Secure strategic assets and compliance documents in the encrypted vault.</p>
+                <Button variant="outline" className="w-full h-9 text-[10px] font-bold uppercase tracking-widest border-slate-100" asChild>
+                  <Link href="/documents">Enter Vault</Link>
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
 
-        {/* Tactical Column */}
         <div className="space-y-8">
           <Card className="border-none shadow-xl bg-white">
             <CardHeader>
               <CardTitle className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
                 <Target className="h-4 w-4 text-accent" />
-                Critical Actions
+                Strategic Actions
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {[
-                  { label: "Finalize Equity Split", urgency: "High", color: "bg-rose-50 text-rose-600 border-rose-100" },
-                  { label: "Monthly Investor Brief", urgency: "Medium", color: "bg-amber-50 text-amber-600 border-amber-100" },
-                  { label: "Q3 Budget Calibration", urgency: "Low", color: "bg-slate-50 text-slate-600 border-slate-100" },
-                ].map((item, i) => (
+                {activeProjects.length > 0 ? activeProjects.slice(0, 3).map((p, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl border border-slate-50 hover:border-accent transition-all cursor-pointer group">
-                    <p className="text-sm font-semibold text-slate-700 group-hover:text-accent transition-colors">{item.label}</p>
-                    <Badge variant="outline" className={`text-[8px] font-bold uppercase ${item.color}`}>
-                      {item.urgency}
+                    <p className="text-sm font-semibold text-slate-700 group-hover:text-accent transition-colors truncate max-w-[150px]">{p.name}</p>
+                    <Badge variant="outline" className="text-[8px] font-bold uppercase bg-blue-50 text-blue-600 border-blue-100">
+                      Active
                     </Badge>
                   </div>
-                ))}
+                )) : (
+                  <div className="py-6 text-center">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">No Strategic Initiatives</p>
+                    <Button variant="link" asChild className="text-[10px] font-bold h-auto p-0 mt-1">
+                      <Link href="/projects">Define Blueprint</Link>
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -13,6 +13,7 @@ import { useMemoFirebase } from "@/firebase/provider"
 import { getStrategicRecommendations, generateTaskTemplate } from "@/modules/execution/utils/executionEngine"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import { calculateRunway } from "@/modules/financial/utils/financialEngine"
 
 export default function AIInsightsPage() {
   const [loading, setLoading] = useState(false)
@@ -28,17 +29,34 @@ export default function AIInsightsPage() {
   const financialsQuery = useMemoFirebase(() => collection(db, 'financials'), [db])
   const { data: financials } = useCollection(financialsQuery)
 
+  const projectsQuery = useMemoFirebase(() => collection(db, 'projects'), [db])
+  const { data: projects } = useCollection(projectsQuery)
+
+  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db])
+  const { data: tasks } = useCollection(tasksQuery)
+
+  const latestMonth = financials && financials.length > 0 ? financials[0] : null;
+  const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
+  const runway = currentBurn > 0 ? calculateRunway(1000000, currentBurn) : 99;
+
   const recommendations = React.useMemo(() => {
-    return getStrategicRecommendations(profile, financials || []);
-  }, [profile, financials]);
+    return getStrategicRecommendations(profile, financials || [], runway);
+  }, [profile, financials, runway]);
 
   const generateInsights = async () => {
     setLoading(true)
     try {
+      // Real data synthesis for AI prompt
       const data = {
-        financialHealthSummary: "Current MRR is $42.5k with a burn rate of $30k/month. Cash runway is 14 months ($420k in bank).",
-        projectProgressSummary: "Development of the AI core is 80% complete. Market analysis module is delayed due to API integration issues.",
-        teamCapacitySummary: "Engineering team is at 95% capacity. Need 2 more backend developers for scaling. Marketing team has bandwidth."
+        financialHealthSummary: latestMonth 
+          ? `Current monthly revenue is ${formatINR(latestMonth.netRevenue)} with ${formatINR(latestMonth.operatingExpenses)} expenses. Estimated runway is ${runway} months.`
+          : "No financial records logged yet.",
+        projectProgressSummary: projects && projects.length > 0
+          ? `Executing ${projects.length} strategic projects. ${projects.filter(p => p.status === 'Active').length} are active.`
+          : "No strategic initiatives defined.",
+        teamCapacitySummary: profile?.teamSize 
+          ? `Leadership team size is ${profile.teamSize}. Tracking individual accountability indexes.`
+          : "Team structure not yet defined in profile."
       }
 
       const result = await aiStrategicGrowthInsights(data)
@@ -46,7 +64,7 @@ export default function AIInsightsPage() {
     } catch (error) {
       toast({
         title: "AI Engine Error",
-        description: "Failed to generate insights. Please check your configuration.",
+        description: "Failed to synthesize platform data. Ensure financials are logged.",
         variant: "destructive"
       })
     } finally {
@@ -87,10 +105,10 @@ export default function AIInsightsPage() {
       await batch.commit()
       toast({
         title: "Initiative Launched",
-        description: `${rec.action} has been added to your Strategy Map with full task templates.`,
+        description: `${rec.action} has been added to your Strategy Map.`,
       })
     } catch (err) {
-      toast({ title: "Action Failed", description: "Could not create project.", variant: "destructive" })
+      toast({ title: "Action Failed", description: "Could not create project record.", variant: "destructive" })
     } finally {
       setCreatingProject(null)
     }
@@ -99,7 +117,7 @@ export default function AIInsightsPage() {
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-12 pb-20">
       <PageHeader 
-        title="AI Growth Intelligence" 
+        title="Expansion Modeling" 
         description="Rule-based strategic detection combined with generative growth modeling."
       />
 
@@ -137,7 +155,7 @@ export default function AIInsightsPage() {
                           ) : (
                             <Target className="h-3 w-3 mr-2" />
                           )}
-                          Convert to Active Initiative
+                          Convert to Strategic Initiative
                         </Button>
                       </div>
                     </div>
@@ -146,7 +164,7 @@ export default function AIInsightsPage() {
               )) : (
                 <Card className="border-2 border-dashed p-12 text-center text-slate-400">
                   <Activity className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  <p className="text-sm font-medium">No rule-based anomalies detected in current parameters.</p>
+                  <p className="text-sm font-medium">Log performance signals to unlock expansion modeling.</p>
                 </Card>
               )}
             </div>
@@ -159,9 +177,9 @@ export default function AIInsightsPage() {
                 <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
                   <BrainCircuit className="h-8 w-8 text-blue-600" />
                 </div>
-                <h3 className="text-xl font-bold mb-2">Generative Analysis Ready</h3>
+                <h3 className="text-xl font-bold mb-2">Generative Roadmap Ready</h3>
                 <p className="text-slate-500 mb-8 max-w-md text-sm">
-                  Click below to synthesize your platform data into a deep-dive growth roadmap.
+                  UdyamRakshak is ready to synthesize your platform signals into a deep-dive growth roadmap.
                 </p>
                 <Button 
                   size="lg" 
@@ -170,7 +188,7 @@ export default function AIInsightsPage() {
                   className="bg-[#3B82F6] hover:bg-[#2563EB] text-white px-8 h-12 rounded-xl"
                 >
                   {loading ? (
-                    <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Analyzing Platform Data...</>
+                    <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Analyzing Platform signals...</>
                   ) : (
                     <><Sparkles className="h-5 w-5 mr-2" /> Generate Roadmap</>
                   )}
@@ -218,7 +236,7 @@ export default function AIInsightsPage() {
                       ))}
                     </ul>
                   </CardContent>
-                </Card>
+                </div>
               </div>
               
               <Card className="border-none shadow-lg bg-amber-50/20 border border-amber-100">
@@ -235,13 +253,12 @@ export default function AIInsightsPage() {
               </Card>
 
               <Button variant="ghost" onClick={() => setInsights(null)} className="text-slate-400 hover:text-slate-600">
-                Regenerate Generative Analysis
+                Regenerate Roadmap
               </Button>
             </div>
           )}
         </div>
 
-        {/* Sidebar Status */}
         <div className="space-y-6">
           <Card className="border-none shadow-sm bg-blue-50/50 p-6 space-y-4">
             <h4 className="text-xs font-bold uppercase text-blue-600 tracking-widest flex items-center gap-2">
@@ -252,10 +269,9 @@ export default function AIInsightsPage() {
                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Model Context</p>
                 <p className="text-sm font-bold text-slate-900">{profile?.businessType || 'Hybrid'} Engine</p>
               </div>
-              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Execution Index</p>
-                <Progress value={75} className="h-1.5" />
-                <p className="text-[9px] text-slate-500 font-medium">Strategic initiatives are 75% healthy.</p>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Revenue Data</p>
+                <p className="text-sm font-bold text-slate-900">{latestMonth ? `Synced: ${latestMonth.id}` : 'No Data'}</p>
               </div>
             </div>
           </Card>
@@ -271,4 +287,12 @@ export default function AIInsightsPage() {
       </div>
     </div>
   )
+}
+
+function formatINR(amount: number) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0
+  }).format(amount);
 }
