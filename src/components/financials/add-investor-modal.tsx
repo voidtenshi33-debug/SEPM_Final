@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { 
   Dialog, 
   DialogContent, 
@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Briefcase } from "lucide-react";
+import { Plus, Briefcase, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddInvestorModalProps {
@@ -36,26 +36,41 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
     const email = formData.get("email") as string;
+    const type = formData.get("type") as string;
     const roundId = formData.get("roundId") as string;
     const investmentAmount = Number(formData.get("investmentAmount"));
     const equityPct = Number(formData.get("equityPct"));
     const dealEndDate = formData.get("dealEndDate") as string;
 
     try {
+      // 1. Create Investor
       await addDoc(collection(firestore, "investors"), {
         name,
         email,
+        type,
         roundId,
         investmentAmount,
         equityPct,
+        tenureYears: 5, // Default
+        lockInYears: 3, // Default
+        dealStartDate: new Date().toISOString(),
         dealEndDate: new Date(dealEndDate).toISOString(),
         loyalty: true,
+        reportingFrequency: "Monthly",
+        status: "Active",
         createdAt: serverTimestamp(),
       });
       
+      // 2. Update Round Totals (Relational Integrity)
+      const roundRef = doc(firestore, "rounds", roundId);
+      await updateDoc(roundRef, {
+        totalRaised: increment(investmentAmount),
+        totalInvestors: increment(1)
+      });
+
       toast({
-        title: "Investor Added",
-        description: `Successfully added ${name} to the cap table.`,
+        title: "Investment Logged",
+        description: `Successfully added ${name} to the round.`,
       });
       setOpen(false);
     } catch (error) {
@@ -72,43 +87,59 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8">
+        <Button variant="outline" size="sm" className="h-8 shadow-sm">
           <Plus className="h-4 w-4 mr-2" /> Add Investor
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-accent" />
-            New Strategic Investor
+            Add Strategic Investor
           </DialogTitle>
           <DialogDescription>
-            Links an investor to a specific funding round and tracks their equity.
+            Every investment must be linked to an active funding round.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="roundId">Funding Round</Label>
+            <Label htmlFor="roundId">Funding Round Context</Label>
             <Select name="roundId" required>
               <SelectTrigger>
-                <SelectValue placeholder="Select round" />
+                <SelectValue placeholder="Select active round" />
               </SelectTrigger>
               <SelectContent>
                 {rounds.map((round) => (
                   <SelectItem key={round.id} value={round.id}>
-                    {round.name}
+                    {round.roundName} ({round.status})
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Investor Name</Label>
-            <Input id="name" name="name" placeholder="Individual or VC name" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Investor Name</Label>
+              <Input id="name" name="name" placeholder="Individual or VC" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" placeholder="investor@example.com" required />
+            <Label htmlFor="type">Investor Type</Label>
+            <Select name="type" required defaultValue="Angel">
+              <SelectTrigger>
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Angel">Angel Investor</SelectItem>
+                <SelectItem value="VC">Venture Capital</SelectItem>
+                <SelectItem value="Corporate">Corporate VC</SelectItem>
+                <SelectItem value="Incubator">Incubator / Accelerator</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -121,12 +152,12 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="dealEndDate">Deal End Date (Lock-in)</Label>
+            <Label htmlFor="dealEndDate">Lock-in End Date</Label>
             <Input id="dealEndDate" name="dealEndDate" type="date" required />
           </div>
           <DialogFooter>
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={loading}>
-              {loading ? "Processing..." : "Confirm Investment"}
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : "Confirm Investment"}
             </Button>
           </DialogFooter>
         </form>

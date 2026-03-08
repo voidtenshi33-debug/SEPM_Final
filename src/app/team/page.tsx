@@ -7,9 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Plus, Mail, Linkedin, Clock, Loader2, Copy, Check } from "lucide-react";
+import { Plus, Mail, Linkedin, Clock, Loader2, Copy, Check, ShieldCheck } from "lucide-react";
 import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
-import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
+import { calculateVestingProgress } from "@/modules/financial/utils/capitalEngine";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,6 +22,7 @@ export default function TeamPage() {
   const { data: team, isLoading } = useCollection(teamQuery);
 
   const handleCopyLink = (id: string) => {
+    // In a real app, this would be a full URL to the acceptance page
     const url = `${window.location.origin}/accept-invite/${id}`;
     navigator.clipboard.writeText(url);
     setCopiedId(id);
@@ -42,10 +43,13 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-headline">Team & Governance</h1>
+          <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
+            <ShieldCheck className="h-8 w-8 text-accent" />
+            Leadership & Governance
+          </h1>
           <p className="text-muted-foreground">Manage roles, equity grants, and real-time vesting progress.</p>
         </div>
         <AddLeadershipModal />
@@ -67,14 +71,14 @@ export default function TeamPage() {
                   <div className={`absolute bottom-0 right-0 h-4 w-4 rounded-full border-2 border-white ${member.inviteStatus === 'Accepted' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                 </div>
                 <CardTitle className="text-xl font-bold">{member.name}</CardTitle>
-                <CardDescription className="font-medium text-accent">{member.title}</CardDescription>
+                <CardDescription className="font-bold text-accent uppercase text-[10px] tracking-widest">{member.roleTitle}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex justify-center gap-2">
-                  <Badge variant="outline" className={member.inviteStatus === 'Accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 uppercase text-[10px]' : 'bg-amber-50 text-amber-700 border-amber-100 uppercase text-[10px]'}>
+                  <Badge variant="outline" className={member.inviteStatus === 'Accepted' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 text-[10px] font-bold' : 'bg-amber-50 text-amber-700 border-amber-100 text-[10px] font-bold'}>
                     {member.inviteStatus || 'Pending'}
                   </Badge>
-                  <Badge className="bg-primary text-white text-[10px]">{member.equityPct}% Equity</Badge>
+                  <Badge className="bg-primary text-white text-[10px] font-bold">{member.equityPct}% Equity</Badge>
                 </div>
 
                 <div className="space-y-2">
@@ -83,7 +87,14 @@ export default function TeamPage() {
                     <span>{progress}%</span>
                   </div>
                   <Progress value={parseFloat(progress)} className="h-1.5" />
-                  <p className="text-[10px] text-center text-slate-400 font-medium">Grant Date: {new Date(member.vestingStartDate).toLocaleDateString()}</p>
+                  <div className="flex justify-between text-[8px] text-slate-400 font-bold uppercase">
+                    <span>Start: {new Date(member.vestingStartDate).toLocaleDateString()}</span>
+                    <span>End: {new Date(member.vestingEndDate).toLocaleDateString()}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-lg text-xs italic text-muted-foreground border border-slate-100">
+                  {member.responsibility}
                 </div>
 
                 <div className="flex border-t pt-4 justify-center gap-4">

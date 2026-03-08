@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
-import { validateEquity, formatINR, calcRemainingTenure, calculateVestingProgress, calcEBITDA } from "@/modules/financial/utils/financialEngine";
+import { validateCapTable, calculateRemainingDealYears } from "@/modules/financial/utils/capitalEngine";
+import { formatINR, calcEBITDA } from "@/modules/financial/utils/financialEngine";
 import { 
   PieChart, 
   Pie, 
@@ -13,7 +14,7 @@ import {
   Tooltip, 
   Legend 
 } from "recharts";
-import { AlertTriangle, ShieldCheck, UserPlus, Clock, FileDown, Rocket } from "lucide-react";
+import { AlertTriangle, ShieldCheck, UserPlus, Clock, FileDown, Rocket, Briefcase } from "lucide-react";
 import { AddRoundModal } from "@/components/financials/add-round-modal";
 import { AddInvestorModal } from "@/components/financials/add-investor-modal";
 import { Button } from "@/components/ui/button";
@@ -33,9 +34,9 @@ export default function CapitalPage() {
   }, []);
 
   // Data Subscriptions
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('roundDate', 'desc')), [db]);
+  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('startDate', 'desc')), [db]);
   const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
-  const leadershipQuery = useMemoFirebase(() => query(collection(db, 'leadership'), orderBy('name', 'asc')), [db]);
+  const leadershipQuery = useMemoFirebase(() => collection(db, 'leadership'), [db]);
   const capRef = useMemoFirebase(() => doc(db, 'capitalStructure', 'main'), [db]);
   const financialsQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('month', 'desc')), [db]);
 
@@ -48,60 +49,57 @@ export default function CapitalPage() {
   const isLoading = loadingRounds || loadingInv || loadingLead || loadingCap;
 
   // Aggregation Logic
-  const totalInvEquity = investors?.reduce((sum, inv) => sum + (inv.equityPct || 0), 0) || 0;
   const totalLeadershipEquity = leadership?.reduce((sum, member) => sum + (member.equityPct || 0), 0) || 0;
+  const totalInvestorEquity = investors?.reduce((sum, inv) => sum + (inv.equityPct || 0), 0) || 0;
   
   const capData = [
-    { name: 'Founders', value: capTable?.founderEquityPct || 0 },
+    { name: 'Founders', value: capTable?.founderPct || 0 },
     { name: 'Leadership', value: totalLeadershipEquity },
-    { name: 'Investors', value: totalInvEquity },
-    { name: 'ESOP Pool', value: capTable?.esopEquityPct || 0 },
+    { name: 'Investors', value: totalInvestorEquity },
+    { name: 'ESOP Pool', value: capTable?.esopPct || 0 },
   ].filter(d => d.value > 0);
 
-  const { isValid: isValidCap, total } = validateEquity(
-    capTable?.founderEquityPct || 0,
-    totalLeadershipEquity,
-    totalInvEquity,
-    capTable?.esopEquityPct || 0
-  );
+  const { isValid: isValidCap, total } = validateCapTable({
+    Founders: capTable?.founderPct || 0,
+    Leadership: totalLeadershipEquity,
+    Investors: totalInvestorEquity,
+    ESOP: capTable?.esopPct || 0
+  });
 
-  // PDF Export Logic (Investor Briefing)
   const handleExportInvestorReport = () => {
     const doc = new jsPDF();
     const latest = financials?.[0];
     const ebitda = latest ? calcEBITDA(latest.netRevenue, latest.operatingExpenses) : 0;
     
     doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42); // Founder Blue
+    doc.setTextColor(15, 23, 42);
     doc.text("Investor Relations: Governance Brief", 14, 22);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Report Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    doc.text(`Cap Table Integrity: ${isValidCap ? 'VALIDATED' : 'OVERFLOW ALERT'}`, 14, 36);
 
     autoTable(doc, {
       startY: 45,
       head: [['Category', 'Metric', 'Value (INR)']],
       body: [
-        ['Capital', 'Total Raised', formatINR(rounds?.reduce((s, r) => s + r.amountRaised, 0) || 0)],
+        ['Capital', 'Total Raised', formatINR(rounds?.reduce((s, r) => s + (r.totalRaised || 0), 0) || 0)],
         ['Capital', 'Active Equity Dilution', `${total}%`],
         ['Operations', 'Active Monthly Revenue', formatINR(latest?.netRevenue || 0)],
         ['Operations', 'Monthly EBITDA', formatINR(ebitda)],
-        ['Operations', 'Operating Expenses', formatINR(latest?.operatingExpenses || 0)],
       ],
       theme: 'striped',
-      headStyles: { fillColor: [59, 130, 246] } // Startup Electric
+      headStyles: { fillColor: [59, 130, 246] }
     });
 
     autoTable(doc, {
       startY: (doc as any).lastAutoTable.finalY + 15,
       head: [['Stakeholder', 'Role/Type', 'Equity %']],
       body: [
-        ['Founders', 'Core Identity', `${capTable?.founderEquityPct || 0}%`],
+        ['Founders', 'Core Identity', `${capTable?.founderPct || 0}%`],
         ['Leadership', 'Team Allocation', `${totalLeadershipEquity}%`],
-        ['Investors', 'Total Participation', `${totalInvEquity}%`],
-        ['ESOP Pool', 'Employee Option Pool', `${capTable?.esopEquityPct || 0}%`],
+        ['Investors', 'Total Participation', `${totalInvestorEquity}%`],
+        ['ESOP Pool', 'Employee Option Pool', `${capTable?.esopPct || 0}%`],
       ],
     });
 
@@ -127,18 +125,17 @@ export default function CapitalPage() {
           </h1>
           <p className="text-muted-foreground">Unified tracking for equity, rounds, and legal structure.</p>
         </div>
-        <Button onClick={handleExportInvestorReport} variant="outline" className="border-accent text-accent shadow-sm hover:bg-accent/5">
+        <Button onClick={handleExportInvestorReport} variant="outline" className="border-accent text-accent">
           <FileDown className="h-4 w-4 mr-2" /> Download Investor Brief
         </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Cap Table Chart */}
         <Card className="border-none shadow-xl lg:col-span-1 h-fit sticky top-24">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-lg font-bold">Cap Table Split</CardTitle>
             {!isValidCap && capData.length > 0 && (
-              <div className="flex items-center text-rose-600 bg-rose-50 px-2 py-1 rounded text-[10px] font-bold border border-rose-100 animate-pulse">
+              <div className="flex items-center text-rose-600 bg-rose-50 px-2 py-1 rounded text-[10px] font-bold border border-rose-100 animate-pulse mt-2">
                 <AlertTriangle className="h-3 w-3 mr-1" /> EQUITY OVERFLOW: {total}%
               </div>
             )}
@@ -170,72 +167,29 @@ export default function CapitalPage() {
           </CardContent>
         </Card>
 
-        {/* Relational Governance Blocks */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Leadership Section */}
-          <Card className="border-none shadow-xl">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-lg font-bold">Leadership Stake</CardTitle>
-                <CardDescription>Core team equity & active vesting schedules</CardDescription>
-              </div>
-              <Link href="/team">
-                <Button variant="ghost" size="sm" className="h-8 text-accent hover:bg-accent/10">
-                  <UserPlus className="h-4 w-4 mr-2" /> Manage Team
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {leadership?.slice(0, 4).map((member) => (
-                    <div key={member.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-bold text-slate-900">{member.name}</p>
-                          <p className="text-[10px] text-slate-500 font-bold uppercase">{member.title}</p>
-                        </div>
-                        <Badge variant="outline" className="border-accent/20 text-accent bg-accent/5">{member.equityPct}% Stake</Badge>
-                      </div>
-                      <div className="flex items-center justify-between mt-3">
-                         <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold uppercase">
-                           <Clock className="h-3 w-3" /> 
-                           {calculateVestingProgress(member.vestingStartDate, member.vestingYears)}% Vested
-                         </div>
-                         <div className="text-[10px] text-slate-400 font-bold uppercase">
-                            Term Ends: {new Date(member.vestingEndDate).toLocaleDateString()}
-                         </div>
-                      </div>
-                    </div>
-                  ))}
-                  {leadership?.length === 0 && (
-                    <div className="col-span-2 text-center py-12 text-slate-400 italic text-sm border-2 border-dashed rounded-xl">
-                      No leadership members recorded.
-                    </div>
-                  )}
-               </div>
-            </CardContent>
-          </Card>
-
-          {/* Rounds Section */}
           <Card className="border-none shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold">Funding Rounds</CardTitle>
-                <CardDescription>Capital history and dilution stages (INR)</CardDescription>
+                <CardDescription>Capital history and dilution stages</CardDescription>
               </div>
               <AddRoundModal />
             </CardHeader>
             <CardContent>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {rounds?.map((round) => (
-                    <div key={round.id} className="p-4 rounded-xl border border-slate-100 flex items-center justify-between bg-slate-50/30">
-                      <div>
-                        <p className="font-bold text-slate-900">{round.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Raised: {formatINR(round.amountRaised)}</p>
+                    <div key={round.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="font-bold text-slate-900">{round.roundName}</p>
+                        <Badge variant={round.status === 'Open' ? 'default' : 'secondary'}>
+                          {round.status}
+                        </Badge>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-accent">{round.equityDilutedPct}% Dilution</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Post-Val: {formatINR(round.postMoneyValuation)}</p>
+                      <div className="space-y-1">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Raised: {formatINR(round.totalRaised || 0)} / {formatINR(round.targetRaise)}</p>
+                        <p className="text-sm font-bold text-accent">{round.equityOfferedPct}% Dilution</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Type: {round.roundType}</p>
                       </div>
                     </div>
                   ))}
@@ -249,12 +203,11 @@ export default function CapitalPage() {
             </CardContent>
           </Card>
 
-          {/* Investors Section */}
           <Card className="border-none shadow-xl">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-bold">Strategic Investors</CardTitle>
-                <CardDescription>Shareholders list & deal tenure auditing</CardDescription>
+                <CardDescription>Shareholders linked to funding rounds</CardDescription>
               </div>
               <AddInvestorModal rounds={rounds || []} />
             </CardHeader>
@@ -275,17 +228,23 @@ export default function CapitalPage() {
                        const round = rounds?.find(r => r.id === investor.roundId);
                        return (
                          <tr key={investor.id} className="hover:bg-slate-50/50 transition-colors">
-                           <td className="px-4 py-3 font-bold text-slate-700">{investor.name}</td>
-                           <td className="px-4 py-3 text-slate-500">{round?.name || '---'}</td>
+                           <td className="px-4 py-3 font-bold text-slate-700">
+                             <div className="flex items-center gap-2">
+                               {investor.name}
+                               {investor.loyalty && <Badge className="bg-emerald-500 text-[8px] h-3 px-1">LOYAL</Badge>}
+                             </div>
+                           </td>
+                           <td className="px-4 py-3 text-slate-500">{round?.roundName || '---'}</td>
                            <td className="px-4 py-3 text-right font-medium">{formatINR(investor.investmentAmount)}</td>
                            <td className="px-4 py-3 text-right font-bold text-accent">{investor.equityPct}%</td>
-                           <td className="px-4 py-3 text-right font-medium text-slate-500">{calcRemainingTenure(investor.dealEndDate)}Y</td>
+                           <td className="px-4 py-3 text-right font-medium text-slate-500">{calculateRemainingDealYears(investor.dealEndDate)}Y</td>
                          </tr>
                        );
                      })}
                      {investors?.length === 0 && (
                        <tr>
                          <td colSpan={5} className="text-center py-12 text-slate-400 italic text-sm">
+                           <Briefcase className="h-8 w-8 mx-auto mb-2 opacity-20" />
                            No strategic investors recorded.
                          </td>
                        </tr>
