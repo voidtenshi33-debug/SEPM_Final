@@ -1,90 +1,88 @@
-
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { KPICard } from "@/components/dashboard/kpi-card";
-import { Wallet, TrendingUp, TrendingDown, DollarSign, Activity } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import * as React from "react";
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, orderBy, limit } from "firebase/firestore";
+import { MetricCards } from "@/components/financials/metric-cards";
+import { OperationalSection } from "@/components/financials/operational-section";
+import { CapitalSection } from "@/components/financials/capital-section";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Wallet, ShieldCheck, Activity } from "lucide-react";
 
-export default function FinancialsPage() {
+export default function FinancialDashboard() {
+  // Constants for singleton & multi-tenant paths
+  const startupId = "demo-startup"; // In production this would come from user context
+  const firestore = useFirestore();
+
+  // Firestore Subscriptions
+  const financialsQuery = useMemoFirebase(() => 
+    query(collection(firestore, "financials"), orderBy("month", "asc"), limit(12)), 
+  [firestore]);
+  
+  const roundsQuery = useMemoFirebase(() => 
+    query(collection(firestore, "rounds"), orderBy("roundDate", "desc")), 
+  [firestore]);
+
+  const investorsQuery = useMemoFirebase(() => 
+    collection(firestore, "investors"), 
+  [firestore]);
+
+  const capTableRef = useMemoFirebase(() => 
+    doc(firestore, "capitalStructure", startupId), 
+  [firestore, startupId]);
+
+  const { data: financials } = useCollection(financialsQuery);
+  const { data: rounds } = useCollection(roundsQuery);
+  const { data: investors } = useCollection(investorsQuery);
+  const { data: capTable } = useDoc(capTableRef);
+
+  const currentMonthData = financials && financials.length > 0 ? financials[financials.length - 1] : null;
+  const prevMonthData = financials && financials.length > 1 ? financials[financials.length - 2] : null;
+
   return (
-    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-      <div>
-        <h1 className="text-3xl font-bold font-headline">Financial Health</h1>
-        <p className="text-muted-foreground">Monitor your burn rate, revenue, and runway.</p>
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
+            <Wallet className="h-8 w-8 text-accent" />
+            Financial Command Center
+          </h1>
+          <p className="text-muted-foreground">Unified Operational & Capital Guard.</p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <KPICard 
-          title="Monthly Burn" 
-          value="$12,000" 
-          icon={TrendingDown} 
-          description="Last month: $11,500"
-          className="bg-rose-50/50"
-        />
-        <KPICard 
-          title="Current Cash" 
-          value="$168,000" 
-          icon={DollarSign} 
-          description="In primary bank account"
-        />
-        <KPICard 
-          title="Runway" 
-          value="14.0 Months" 
-          icon={Activity} 
-          description="Healthy status"
-          className="bg-emerald-50/50"
-        />
-      </div>
+      <MetricCards 
+        currentFinancials={currentMonthData} 
+        prevFinancials={prevMonthData} 
+        currentCash={168000} // This would be fetched from a dedicated cash entity in production
+      />
 
-      <Card className="border-none shadow-lg">
-        <CardHeader>
-          <CardTitle>Cash Management</CardTitle>
-          <CardDescription>Visualizing your financial sustainability.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-8">
-          <div className="space-y-4">
-            <div className="flex justify-between items-end">
-              <div>
-                <h4 className="font-semibold">Runway Depletion</h4>
-                <p className="text-xs text-muted-foreground">Estimated date of zero cash: January 2025</p>
-              </div>
-              <span className="text-sm font-bold">14/24 Months Target</span>
-            </div>
-            <Progress value={58} className="h-3" />
-            <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-              <span>Critical (3m)</span>
-              <span>Warning (6m)</span>
-              <span>Healthy (12m+)</span>
-            </div>
-          </div>
+      <Tabs defaultValue="operations" className="space-y-6">
+        <TabsList className="bg-slate-100 p-1">
+          <TabsTrigger value="operations" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Operational Performance
+          </TabsTrigger>
+          <TabsTrigger value="capital" className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4" />
+            Capital & Governance
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-            <div className="p-4 rounded-xl border border-dashed border-muted-foreground/30">
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                Revenue Streams
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex justify-between"><span>SaaS Subscriptions</span> <span className="font-mono font-bold">$18,200</span></li>
-                <li className="flex justify-between"><span>Professional Services</span> <span className="font-mono font-bold">$6,300</span></li>
-                <li className="flex justify-between border-t pt-2 font-bold uppercase text-xs"><span>Total MRR</span> <span>$24,500</span></li>
-              </ul>
-            </div>
-            <div className="p-4 rounded-xl border border-dashed border-muted-foreground/30">
-              <h4 className="font-semibold mb-2 flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-rose-500" />
-                Major Expenses
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li className="flex justify-between"><span>Payroll</span> <span className="font-mono font-bold">$8,500</span></li>
-                <li className="flex justify-between"><span>Infrastructure</span> <span className="font-mono font-bold">$1,200</span></li>
-                <li className="flex justify-between border-t pt-2 font-bold uppercase text-xs"><span>Total OPEX</span> <span>$12,000</span></li>
-              </ul>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <TabsContent value="operations" className="space-y-8 animate-in fade-in duration-300">
+          <OperationalSection history={financials || []} />
+        </TabsContent>
+
+        <TabsContent value="capital" className="space-y-8 animate-in fade-in duration-300">
+          <CapitalSection 
+            rounds={rounds || []} 
+            investors={investors || []} 
+            capTable={capTable}
+            onAddRound={() => {}} // Modals would be linked here
+            onAddInvestor={() => {}}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
