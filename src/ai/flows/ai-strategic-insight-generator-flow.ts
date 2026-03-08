@@ -16,7 +16,7 @@ const GenerateStrategicInsightsInputSchema = z.object({
   industry: z.string().describe("The industry the startup operates in."),
   stage: z.string().describe("The current funding stage of the startup (e.g., 'Seed', 'Series A', 'Growth')."),
   cashRunwayMonths: z.number().describe("The number of months the startup has cash left before running out."),
-  currentRevenueMonthly: z.number().describe("The startup's current monthly recurring revenue in USD."),
+  currentRevenueMonthly: z.number().describe("The startup's current monthly recurring revenue in INR."),
   teamSize: z.number().describe("The total number of employees or team members."),
   activeProjectsCount: z.number().describe("The number of projects currently active."),
   recentChallenges: z.string().describe("A summary of recent challenges faced by the startup."),
@@ -42,12 +42,14 @@ const prompt = ai.definePrompt({
   output: { schema: GenerateStrategicInsightsOutputSchema },
   prompt: `You are an expert startup advisor and strategic consultant. Your goal is to analyze the provided startup data and offer actionable strategic insights and recommendations to help the founder make informed decisions and focus on critical areas for growth and stability.
 
+All monetary values are in Indian Rupees (INR - ₹).
+
 Here is the current data for the startup:
 Startup Name: {{{startupName}}}
 Industry: {{{industry}}}
 Stage: {{{stage}}}
 Cash Runway: {{{cashRunwayMonths}}} months
-Current Monthly Revenue: {{{currentRevenueMonthly}}} USD
+Current Monthly Revenue: ₹{{{currentRevenueMonthly}}}
 Team Size: {{{teamSize}}} people
 Active Projects: {{{activeProjectsCount}}}
 

@@ -1,11 +1,10 @@
-
 "use client";
 
 import * as React from "react";
 import { generateStrategicInsights, type GenerateStrategicInsightsOutput } from "@/ai/flows/ai-strategic-insight-generator-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { BrainCircuit, Loader2, Target, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
+import { BrainCircuit, Loader2, Target, CheckCircle2, AlertTriangle, Sparkles, Activity } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AIInsightsPage() {
@@ -21,11 +20,11 @@ export default function AIInsightsPage() {
         industry: "SaaS",
         stage: "Seed",
         cashRunwayMonths: 14,
-        currentRevenueMonthly: 24500,
+        currentRevenueMonthly: 245000,
         teamSize: 12,
         activeProjectsCount: 8,
         recentChallenges: "User churn has slightly increased, and we are facing difficulties hiring a senior backend engineer.",
-        currentGoals: "Reach $30k MRR by end of year and launch a new AI integration feature."
+        currentGoals: "Reach ₹3L MRR by end of year and launch a new AI integration feature."
       });
       setInsights(result);
     } catch (error) {
@@ -47,7 +46,7 @@ export default function AIInsightsPage() {
             <BrainCircuit className="h-8 w-8 text-accent" />
             Growth Intelligence Engine
           </h1>
-          <p className="text-muted-foreground">AI-driven strategic decision support based on your operational data.</p>
+          <p className="text-muted-foreground">AI-driven strategic decision support based on your operational data (INR).</p>
         </div>
         <Button 
           onClick={handleGenerate} 
@@ -158,6 +157,3 @@ export default function AIInsightsPage() {
     </div>
   );
 }
-
-// Add Activity icon which was missing in imports
-import { Activity } from "lucide-react";
