@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -40,20 +41,20 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
     const amount = Number(formData.get("investmentAmount"));
 
     try {
-      // 1. Log Investor
+      // 1. Log Investor under user tenant
       await addDoc(collection(firestore, "users", user.uid, "investors"), {
         roundId,
         name: formData.get("name") as string,
+        email: formData.get("email") as string,
         investmentAmount: amount,
         equityPct: Number(formData.get("equityPct")),
-        tenureYears: Number(formData.get("tenureYears")),
         dealStartDate: formData.get("dealStartDate") as string,
         dealEndDate: formData.get("dealEndDate") as string,
         loyalty: true,
         createdAt: serverTimestamp(),
       });
       
-      // 2. Atomic update to parent Round
+      // 2. Atomic update to parent Round under user tenant
       const roundRef = doc(firestore, "users", user.uid, "rounds", roundId);
       await updateDoc(roundRef, {
         amountRaised: increment(amount),
@@ -108,9 +109,15 @@ export function AddInvestorModal({ rounds }: AddInvestorModalProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="name">Investor Name</Label>
-            <Input id="name" name="name" required />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Investor Name</Label>
+              <Input id="name" name="name" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" placeholder="investor@fund.vc" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

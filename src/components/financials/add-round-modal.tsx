@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -45,6 +46,7 @@ export function AddRoundModal() {
         roundType,
         preMoneyValuation,
         amountRaised: 0, 
+        targetRaise,
         equityDilutedPct,
         roundDate: new Date(roundDate).toISOString(),
         status: "Open",

@@ -3,21 +3,38 @@
 
 import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { Card, CardContent } from "@/components/ui/card";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { formatINR, calculatePostMoney } from "@/modules/financial/utils/financialEngine";
 import { Badge } from "@/components/ui/badge";
 import { AddRoundModal } from "@/components/financials/add-round-modal";
-import { Rocket, Target, Calendar, Users } from "lucide-react";
+import { Target, Calendar, Users, Loader2 } from "lucide-react";
 
 export default function RoundsPage() {
   const db = useFirestore();
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('roundDate', 'desc')), [db]);
-  const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
+  const { user } = useUser();
 
-  const { data: rounds, isLoading } = useCollection(roundsQuery);
-  const { data: investors } = useCollection(investorsQuery);
+  const roundsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'rounds'), orderBy('roundDate', 'desc'));
+  }, [db, user]);
+
+  const investorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'investors');
+  }, [db, user]);
+
+  const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
+  const { data: investors, isLoading: loadingInv } = useCollection(investorsQuery);
+
+  if (loadingRounds || loadingInv || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
@@ -32,8 +49,7 @@ export default function RoundsPage() {
           const roundInvestors = investors?.filter(i => i.roundId === round.id) || [];
           const actualRaised = roundInvestors.reduce((sum, i) => sum + (i.investmentAmount || 0), 0);
           const postMoney = calculatePostMoney(round.preMoneyValuation || 0, actualRaised);
-          // Fallback to preMoneyValuation + amountRaised if needed
-          const target = round.targetRaise || round.amountRaised || 1;
+          const target = round.amountRaised || 1; // Used as target in UI for progress
           const progress = Math.min((actualRaised / target) * 100, 100);
 
           return (
@@ -102,7 +118,7 @@ export default function RoundsPage() {
             </Card>
           );
         })}
-        {rounds?.length === 0 && !isLoading && (
+        {rounds?.length === 0 && (
           <div className="text-center py-20 bg-slate-50 border-2 border-dashed rounded-3xl">
             <Target className="h-12 w-12 text-slate-200 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-slate-900">No Funding Records</h3>

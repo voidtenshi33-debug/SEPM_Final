@@ -1,40 +1,58 @@
+
 "use client";
 
 import * as React from "react";
-import { useFirestore, useCollection, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useDoc, useMemoFirebase, useUser } from "@/firebase";
 import { collection, doc, query, orderBy, limit } from "firebase/firestore";
 import { MetricCards } from "@/components/financials/metric-cards";
 import { OperationalSection } from "@/components/financials/operational-section";
 import { CapitalSection } from "@/components/financials/capital-section";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Wallet, ShieldCheck, Activity } from "lucide-react";
+import { Wallet, ShieldCheck, Activity, Loader2 } from "lucide-react";
 
 export default function FinancialDashboard() {
-  // Constants for singleton & multi-tenant paths
-  const startupId = "demo-startup"; // In production this would come from user context
   const firestore = useFirestore();
+  const { user } = useUser();
 
-  // Firestore Subscriptions
-  const financialsQuery = useMemoFirebase(() => 
-    query(collection(firestore, "financials"), orderBy("month", "asc"), limit(12)), 
-  [firestore]);
+  // Firestore Subscriptions (Multi-tenant)
+  const financialsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "users", user.uid, "financials"), orderBy("id", "asc"), limit(12));
+  }, [firestore, user]);
   
-  const roundsQuery = useMemoFirebase(() => 
-    query(collection(firestore, "rounds"), orderBy("roundDate", "desc")), 
-  [firestore]);
+  const roundsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "users", user.uid, "rounds"), orderBy("roundDate", "desc"));
+  }, [firestore, user]);
 
-  const investorsQuery = useMemoFirebase(() => 
-    collection(firestore, "investors"), 
-  [firestore]);
+  const investorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "users", user.uid, "investors");
+  }, [firestore, user]);
 
-  const capTableRef = useMemoFirebase(() => 
-    doc(firestore, "capitalStructure", startupId), 
-  [firestore, startupId]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "users", user.uid, "leadership");
+  }, [firestore, user]);
 
-  const { data: financials } = useCollection(financialsQuery);
-  const { data: rounds } = useCollection(roundsQuery);
-  const { data: investors } = useCollection(investorsQuery);
-  const { data: capTable } = useDoc(capTableRef);
+  const capTableRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, "users", user.uid, "capitalStructure", "main");
+  }, [firestore, user]);
+
+  const { data: financials, isLoading: loadingFin } = useCollection(financialsQuery);
+  const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
+  const { data: investors, isLoading: loadingInv } = useCollection(investorsQuery);
+  const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
+  const { data: capTable, isLoading: loadingCap } = useDoc(capTableRef);
+
+  if (loadingFin || loadingRounds || loadingInv || loadingLead || loadingCap || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   const currentMonthData = financials && financials.length > 0 ? financials[financials.length - 1] : null;
   const prevMonthData = financials && financials.length > 1 ? financials[financials.length - 2] : null;
@@ -54,7 +72,7 @@ export default function FinancialDashboard() {
       <MetricCards 
         currentFinancials={currentMonthData} 
         prevFinancials={prevMonthData} 
-        currentCash={168000} // This would be fetched from a dedicated cash entity in production
+        currentCash={42000000} // This would be fetched from a dedicated cash entity in production
       />
 
       <Tabs defaultValue="operations" className="space-y-6">
@@ -77,8 +95,9 @@ export default function FinancialDashboard() {
           <CapitalSection 
             rounds={rounds || []} 
             investors={investors || []} 
+            leadership={leadership || []}
             capTable={capTable}
-            onAddRound={() => {}} // Modals would be linked here
+            onAddRound={() => {}} // Modals are now standalone triggers in subpages
             onAddInvestor={() => {}}
           />
         </TabsContent>

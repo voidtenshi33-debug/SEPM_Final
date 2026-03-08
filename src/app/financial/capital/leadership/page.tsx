@@ -3,11 +3,11 @@
 
 import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Mail, Shield, Award, Clock, Link as LinkIcon, CheckCircle2, Copy } from "lucide-react";
+import { Mail, Shield, Award, CheckCircle2, Copy, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
 import { Badge } from "@/components/ui/badge";
@@ -19,9 +19,14 @@ const COLORS = ["bg-slate-900", "bg-blue-600", "bg-indigo-600", "bg-emerald-600"
 
 export default function LeadershipPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   
-  const leadershipQuery = useMemoFirebase(() => query(collection(db, 'leadership'), orderBy('name', 'asc')), [db]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'leadership'), orderBy('name', 'asc'));
+  }, [db, user]);
+
   const { data: leadership, isLoading } = useCollection(leadershipQuery);
 
   const copyInviteLink = (memberId: string) => {
@@ -32,6 +37,14 @@ export default function LeadershipPage() {
       description: "Send this to the member to finalize access.",
     });
   };
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
@@ -110,12 +123,12 @@ export default function LeadershipPage() {
             </Card>
           );
         })}
-        {leadership?.length === 0 && !isLoading && (
+        {leadership?.length === 0 && (
           <Card className="col-span-full border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center p-16 text-center text-slate-400">
             <div className="p-4 rounded-full bg-slate-100 mb-4">
               <Shield className="h-10 w-10 opacity-20" />
             </div>
-            <h4 className="font-bold text-slate-600 text-lg font-headline">No Leadership DNA Detected</h4>
+            <h4 className="font-bold text-slate-600 text-lg">No Leadership DNA Detected</h4>
             <p className="text-sm mt-1 max-w-xs">Add your core team to begin tracking equity distribution and vesting schedules.</p>
             <div className="mt-6">
               <AddLeadershipModal />
@@ -134,9 +147,9 @@ export default function LeadershipPage() {
                 <Award className="h-8 w-8 text-blue-400" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 text-white font-headline">Vesting Enforcement</h3>
+                <h3 className="text-xl font-bold mb-2 text-white">Vesting Enforcement</h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  UdyamRakshak automatically calculates equity release based on your governance rules. Ensure all team members have valid vesting start dates to maintain cap table compliance.
+                  StartupOS automatically calculates equity release based on your governance rules. Ensure all team members have valid vesting start dates to maintain cap table compliance.
                 </p>
                 <Button variant="outline" className="text-white border-slate-700 hover:bg-slate-800 text-[10px] font-bold uppercase tracking-widest h-9">Review Governance Policy</Button>
              </div>
@@ -152,7 +165,7 @@ export default function LeadershipPage() {
                 <CheckCircle2 className="h-8 w-8 text-emerald-600" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Stakeholder Handshake</h3>
+                <h3 className="text-xl font-bold mb-2 text-slate-900">Stakeholder Handshake</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
                   Once a member accepts their invitation, their profile is automatically linked to their user record, granting them role-based access to the war room.
                 </p>

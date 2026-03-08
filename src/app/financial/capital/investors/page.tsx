@@ -3,21 +3,38 @@
 
 import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { Card, CardContent } from "@/components/ui/card";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
-import { formatINR, calcRemainingTenure } from "@/modules/financial/utils/financialEngine";
+import { formatINR, calculateRemainingDealYears } from "@/modules/financial/utils/financialEngine";
 import { Badge } from "@/components/ui/badge";
 import { AddInvestorModal } from "@/components/financials/add-investor-modal";
-import { Briefcase, Handshake, Mail, ExternalLink } from "lucide-react";
+import { Briefcase, Handshake, Mail, Loader2 } from "lucide-react";
 
 export default function InvestorsPage() {
   const db = useFirestore();
-  const investorsQuery = useMemoFirebase(() => collection(db, 'investors'), [db]);
-  const roundsQuery = useMemoFirebase(() => query(collection(db, 'rounds'), orderBy('startDate', 'desc')), [db]);
+  const { user } = useUser();
 
-  const { data: investors, isLoading } = useCollection(investorsQuery);
-  const { data: rounds } = useCollection(roundsQuery);
+  const investorsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'investors');
+  }, [db, user]);
+
+  const roundsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'rounds'), orderBy('roundDate', 'desc'));
+  }, [db, user]);
+
+  const { data: investors, isLoading: loadingInv } = useCollection(investorsQuery);
+  const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);
+
+  if (loadingInv || loadingRounds || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
@@ -53,13 +70,13 @@ export default function InvestorsPage() {
                             <Badge variant="outline" className="text-[8px] h-4 font-bold">{investor.type || 'Angel'}</Badge>
                           </span>
                           <span className="text-xs text-slate-500 flex items-center gap-1 mt-1">
-                            <Mail className="h-3 w-3" /> {investor.email}
+                            <Mail className="h-3 w-3" /> {investor.email || 'No email registered'}
                           </span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100 text-[10px]">
-                          {round?.roundName || 'Direct Allotment'}
+                          {round?.name || 'Direct Allotment'}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right font-medium">
@@ -70,7 +87,7 @@ export default function InvestorsPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-1 font-bold text-slate-600">
-                          {calcRemainingTenure(investor.dealEndDate)} <span className="text-[10px] text-slate-400">Y</span>
+                          {calculateRemainingDealYears(investor.dealEndDate)} <span className="text-[10px] text-slate-400">Y</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -83,7 +100,7 @@ export default function InvestorsPage() {
                     </tr>
                   );
                 })}
-                {investors?.length === 0 && !isLoading && (
+                {investors?.length === 0 && (
                   <tr>
                     <td colSpan={6} className="text-center py-20 text-slate-400 italic">
                       <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-10" />
