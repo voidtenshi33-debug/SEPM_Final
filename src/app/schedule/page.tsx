@@ -18,7 +18,7 @@ import {
   Monitor,
   CheckCircle2
 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, query, where, orderBy } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -46,22 +46,29 @@ const TYPE_ICONS: Record<string, any> = {
 
 export default function SchedulePage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const today = new Date().toISOString().split('T')[0];
 
-  const scheduleQuery = useMemoFirebase(() => 
-    query(collection(db, 'schedule'), where('date', '==', today), orderBy('startTime', 'asc')),
-  [db, today]);
+  const scheduleQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, 'users', user.uid, 'schedule'), 
+      where('date', '==', today), 
+      orderBy('startTime', 'asc')
+    );
+  }, [db, user, today]);
   
   const { data: blocks, isLoading } = useCollection(scheduleQuery);
 
   const handleAddBlock = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     const formData = new FormData(e.currentTarget);
     
     try {
-      await addDoc(collection(db, 'schedule'), {
+      await addDoc(collection(db, 'users', user.uid, 'schedule'), {
         title: formData.get('title'),
         startTime: formData.get('start'),
         endTime: formData.get('end'),
@@ -77,7 +84,8 @@ export default function SchedulePage() {
   };
 
   const handleDelete = async (id: string) => {
-    await deleteDoc(doc(db, 'schedule', id));
+    if (!user) return;
+    await deleteDoc(doc(db, 'users', user.uid, 'schedule', id));
     toast({ title: "Block Cleared" });
   };
 
@@ -141,7 +149,7 @@ export default function SchedulePage() {
           <div className="relative p-8">
             <div className="absolute left-[47px] top-8 bottom-8 w-px bg-slate-100 hidden md:block" />
             <div className="space-y-8 relative">
-              {isLoading ? (
+              {isLoading || !user ? (
                 <div className="flex items-center justify-center py-20">
                   <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
                 </div>

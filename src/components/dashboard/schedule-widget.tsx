@@ -3,7 +3,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import { Clock, Calendar, ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -11,11 +11,18 @@ import { Badge } from "@/components/ui/badge";
 
 export function ScheduleWidget() {
   const db = useFirestore();
+  const { user } = useUser();
   const today = new Date().toISOString().split('T')[0];
 
-  const scheduleQuery = useMemoFirebase(() => 
-    query(collection(db, 'schedule'), where('date', '==', today), orderBy('startTime', 'asc'), limit(3)),
-  [db, today]);
+  const scheduleQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(db, 'users', user.uid, 'schedule'), 
+      where('date', '==', today), 
+      orderBy('startTime', 'asc'), 
+      limit(3)
+    );
+  }, [db, user, today]);
   
   const { data: blocks, isLoading } = useCollection(scheduleQuery);
 
@@ -31,7 +38,7 @@ export function ScheduleWidget() {
         </Link>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {isLoading ? (
+        {isLoading || !user ? (
           <div className="h-20 animate-pulse bg-slate-50 rounded-xl" />
         ) : blocks?.length === 0 ? (
           <p className="text-xs text-slate-400 italic text-center py-4">No blocks planned for today.</p>

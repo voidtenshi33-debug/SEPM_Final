@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -7,21 +8,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus } from 'lucide-react';
-import { useFirestore } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirestore, useUser } from '@/firebase';
+import { collection, addDoc } from 'firebase/firestore';
 import { addYears, format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
-/**
- * AddLeadershipModal - Handles the invitation of new leadership members.
- * Enforces governance by tracking equity distribution and vesting schedules.
- */
 export function AddLeadershipModal() {
   const [open, setOpen] = React.useState(false);
   const db = useFirestore();
+  const { user } = useUser();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     const formData = new FormData(e.currentTarget);
     
     const years = Number(formData.get('vestingYears'));
@@ -41,10 +41,13 @@ export function AddLeadershipModal() {
       createdAt: new Date().toISOString(),
     };
 
-    const ref = collection(db, 'leadership');
-    // Use non-blocking utility for optimistic UI and background sync
-    addDocumentNonBlocking(ref, memberData);
-    setOpen(false);
+    try {
+      await addDoc(collection(db, 'users', user.uid, 'leadership'), memberData);
+      toast({ title: "Leader Invited", description: "Vesting schedule initialized." });
+      setOpen(false);
+    } catch (err) {
+      toast({ title: "Action Failed", variant: "destructive" });
+    }
   };
 
   return (

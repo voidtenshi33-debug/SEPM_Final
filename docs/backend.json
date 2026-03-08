@@ -216,6 +216,20 @@
         "isLocked": { "type": "boolean" }
       },
       "required": ["name", "type", "lastModified", "isLocked"]
+    },
+    "ScheduleBlock": {
+      "title": "ScheduleBlock",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "startTime": { "type": "string" },
+        "endTime": { "type": "string" },
+        "type": { "type": "string" },
+        "date": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "startTime", "endTime", "type", "date"]
     }
   },
   "auth": {
@@ -234,6 +248,7 @@
     "users/{userId}/projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
     "users/{userId}/tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
     "users/{userId}/tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." },
-    "users/{userId}/documents/{docId}": { "schema": "Document", "description": "Strategic document vault." }
+    "users/{userId}/documents/{docId}": { "schema": "Document", "description": "Strategic document vault." },
+    "users/{userId}/schedule/{blockId}": { "schema": "ScheduleBlock", "description": "Founder daily time blocks." }
   }
 }

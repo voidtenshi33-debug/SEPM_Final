@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -25,7 +26,7 @@ import {
   Layers,
   Linkedin
 } from "lucide-react"
-import { useFirestore, useDoc, useMemoFirebase } from "@/firebase"
+import { useFirestore, useDoc, useMemoFirebase, useUser } from "@/firebase"
 import { doc } from "firebase/firestore"
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates"
 import { useToast } from "@/hooks/use-toast"
@@ -50,8 +51,13 @@ const fundingStages = ["Bootstrapped", "Pre-Seed", "Seed", "Series A", "Series B
 const revenueModels = ["Subscription", "Marketplace", "Transactional", "Ad-Based", "Enterprise"];
 
 export default function ProfilePage() {
+  const { user } = useUser()
   const db = useFirestore()
-  const profileRef = useMemoFirebase(() => doc(db, 'startupProfile', 'main'), [db])
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid, 'startupProfile', 'main');
+  }, [db, user])
+  
   const { data: profile, isLoading } = useDoc(profileRef)
   const { toast } = useToast()
 
@@ -101,6 +107,7 @@ export default function ProfilePage() {
   }, [profile])
 
   const handleSave = () => {
+    if (!profileRef) return;
     setDocumentNonBlocking(profileRef, formData, { merge: true })
     setIsEditing(false)
     toast({
@@ -125,7 +132,7 @@ export default function ProfilePage() {
     setShowConfirm(false)
   }
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
