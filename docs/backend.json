@@ -33,7 +33,8 @@
         "teamSize": { "type": "number" },
         "mission": { "type": "string" },
         "website": { "type": "string" },
-        "location": { "type": "string" }
+        "location": { "type": "string" },
+        "governancePin": { "type": "string" }
       }
     },
     "ExpenseCategory": {

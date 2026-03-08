@@ -16,7 +16,8 @@ import {
   Save, 
   AlertTriangle,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from "lucide-react"
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase"
 import { doc } from "firebase/firestore"
@@ -57,7 +58,8 @@ export default function ProfilePage() {
     teamSize: 1,
     mission: "",
     website: "",
-    location: ""
+    location: "",
+    governancePin: ""
   })
 
   useEffect(() => {
@@ -69,7 +71,8 @@ export default function ProfilePage() {
         teamSize: profile.teamSize || 1,
         mission: profile.mission || "",
         website: profile.website || "www.startup.os",
-        location: profile.location || "San Francisco, CA"
+        location: profile.location || "San Francisco, CA",
+        governancePin: profile.governancePin || ""
       })
     }
   }, [profile])
@@ -79,7 +82,7 @@ export default function ProfilePage() {
     setIsEditing(false)
     toast({
       title: "Profile Updated",
-      description: "Your startup's core identity has been secured.",
+      description: "Your startup's core identity and governance rules have been secured.",
     })
   }
 
@@ -211,16 +214,21 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase text-slate-400 tracking-widest">Global Team Size</Label>
+                  <Label className="text-xs font-bold uppercase text-slate-400 tracking-widest text-emerald-600 flex items-center gap-1">
+                    <Lock className="h-3 w-3" /> Governance Secret PIN
+                  </Label>
                   {isEditing ? (
                     <Input 
-                      type="number"
-                      value={formData.teamSize} 
-                      onChange={(e) => setFormData({...formData, teamSize: Number(e.target.value)})}
+                      type="password"
+                      maxLength={4}
+                      value={formData.governancePin} 
+                      onChange={(e) => setFormData({...formData, governancePin: e.target.value})}
+                      placeholder="4-digit PIN (e.g. 1234)"
                     />
                   ) : (
-                    <p className="text-sm font-medium text-slate-700">{formData.teamSize} Personnel</p>
+                    <p className="text-sm font-medium text-slate-700">••••</p>
                   )}
+                  <p className="text-[10px] text-slate-400 italic">Used for sensitive actions like deal reversals.</p>
                 </div>
               </div>
 
@@ -271,9 +279,9 @@ export default function ProfilePage() {
               <CheckCircle2 className="h-5 w-5 text-blue-400" />
             </div>
             <div>
-              <h4 className="font-bold text-sm">Adaptive Configuration Active</h4>
+              <h4 className="font-bold text-sm">Governance Protocols Active</h4>
               <p className="text-xs text-slate-400 mt-0.5">
-                Your <span className="text-blue-400 font-bold uppercase">{formData.businessType}</span> model is currently driving the layouts in the Sales Intelligence and Operational Performance modules.
+                Your Governance PIN and <span className="text-blue-400 font-bold uppercase">{formData.businessType}</span> model are protecting your strategic assets.
               </p>
             </div>
           </div>

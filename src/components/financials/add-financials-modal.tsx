@@ -36,7 +36,7 @@ export function AddFinancialsModal() {
 
     const financialData = {
       id: monthId,
-      grossRevenue: netRevenue, // Simplified for MVP
+      grossRevenue: netRevenue,
       discounts: 0,
       netRevenue: netRevenue,
       operatingExpenses: opEx,
