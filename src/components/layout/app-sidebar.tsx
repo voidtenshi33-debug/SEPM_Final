@@ -1,3 +1,4 @@
+
 "use client";
 
 import * as React from "react";
@@ -14,7 +15,8 @@ import {
   ShieldCheck,
   Activity,
   Tags,
-  Zap
+  Zap,
+  Target
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -39,6 +41,10 @@ const mainNavItems = [
 
 const teamNavItems = [
   { title: "Leadership Team", icon: Users, url: "/team" },
+];
+
+const executionNavItems = [
+  { title: "Projects & Tasks", icon: Target, url: "/projects" },
 ];
 
 const capitalNavItems = [
@@ -93,6 +99,13 @@ export function AppSidebar() {
           <SidebarGroupLabel>Main</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavList items={mainNavItems} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Execution</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavList items={executionNavItems} />
           </SidebarGroupContent>
         </SidebarGroup>
 

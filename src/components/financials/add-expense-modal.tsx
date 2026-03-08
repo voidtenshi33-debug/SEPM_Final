@@ -2,8 +2,8 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore } from "@/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
 import { 
   Dialog, 
   DialogContent, 
@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ReceiptText } from "lucide-react";
+import { Plus, ReceiptText, Briefcase } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface AddExpenseModalProps {
@@ -30,6 +30,9 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  const projectsQuery = useMemoFirebase(() => collection(firestore, "projects"), [firestore]);
+  const { data: projects } = useCollection(projectsQuery);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
@@ -37,23 +40,32 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
     const formData = new FormData(e.currentTarget);
     const amount = Number(formData.get("amount"));
     const categoryId = formData.get("categoryId") as string;
+    const projectId = formData.get("projectId") as string;
     const date = formData.get("date") as string;
     const description = formData.get("description") as string;
     
-    // Extract month YYYY-MM
     const monthId = date.substring(0, 7);
 
     try {
+      // 1. Log Expense
       await addDoc(collection(firestore, "expenses"), {
         amount,
         categoryId,
+        projectId: projectId || null,
         date,
-        month: monthId, // Standardized for logic
-        monthId: monthId, // Redundant but consistent with backend.json
+        monthId: monthId,
         description,
         createdAt: serverTimestamp(),
       });
       
+      // 2. If linked to a project, update project's budgetUsed
+      if (projectId) {
+        const projectRef = doc(firestore, "projects", projectId);
+        await updateDoc(projectRef, {
+          budgetUsed: increment(amount)
+        });
+      }
+
       toast({
         title: "Expense Logged",
         description: `Successfully added ₹${amount} expense record.`,
@@ -84,7 +96,7 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
             New Operational Expense
           </DialogTitle>
           <DialogDescription>
-            Records will dynamically influence your EBITDA and Runway calculations.
+            Records will influence EBITDA, Runway, and Project Health.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-4">
@@ -92,28 +104,50 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
             <Label htmlFor="amount">Amount (₹)</Label>
             <Input id="amount" name="amount" type="number" placeholder="Enter amount in INR" required />
           </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="categoryId">Category</Label>
+              <Select name="categoryId" required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date">Date</Label>
+              <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
+            </div>
+          </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="categoryId">Category</Label>
-            <Select name="categoryId" required>
+            <Label htmlFor="projectId" className="flex items-center gap-2">
+              <Briefcase className="h-3 w-3" /> Linked Project (Optional)
+            </Label>
+            <Select name="projectId">
               <SelectTrigger>
-                <SelectValue placeholder="Select classification" />
+                <SelectValue placeholder="No Project Link" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name} ({cat.type})
+                <SelectItem value="">No Project Link</SelectItem>
+                {projects?.map((proj) => (
+                  <SelectItem key={proj.id} value={proj.id}>
+                    {proj.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
-          </div>
+
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>
-            <Input id="description" name="description" placeholder="Brief details of expense" />
+            <Input id="description" name="description" placeholder="Brief details" />
           </div>
           <DialogFooter>
             <Button type="submit" className="w-full bg-accent hover:bg-accent/90" disabled={loading}>

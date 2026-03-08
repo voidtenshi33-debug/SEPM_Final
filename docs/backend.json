@@ -56,6 +56,7 @@
         "id": { "type": "string" },
         "monthId": { "type": "string", "description": "YYYY-MM" },
         "categoryId": { "type": "string" },
+        "projectId": { "type": "string", "description": "Optional link to a project." },
         "amount": { "type": "number" },
         "description": { "type": "string" },
         "date": { "type": "string", "format": "date-time" }
@@ -146,6 +147,46 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "categoryBudgets"]
+    },
+    "Project": {
+      "title": "Project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["Fundraising", "Product", "Growth", "Infrastructure"] },
+        "budgetAllocated": { "type": "number" },
+        "budgetUsed": { "type": "number" },
+        "targetEndDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["Active", "Delayed", "At Risk", "Completed"] },
+        "description": { "type": "string" }
+      },
+      "required": ["name", "budgetAllocated", "targetEndDate"]
+    },
+    "Task": {
+      "title": "Task",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "projectId": { "type": "string" },
+        "title": { "type": "string" },
+        "status": { "type": "string", "enum": ["Todo", "In Progress", "Completed"] },
+        "deadline": { "type": "string", "format": "date" },
+        "assignedTo": { "type": "string" },
+        "bonusEligible": { "type": "boolean" }
+      },
+      "required": ["projectId", "title", "status"]
+    },
+    "WeeklyUpdate": {
+      "title": "WeeklyUpdate",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "taskId": { "type": "string" },
+        "content": { "type": "string" },
+        "author": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      }
     }
   },
   "auth": {
@@ -160,6 +201,9 @@
     "rounds/{roundId}": { "schema": "Round", "description": "Funding round history." },
     "investors/{investorId}": { "schema": "Investor", "description": "Investor cap table entries." },
     "capitalStructure/main": { "schema": "CapitalStructure", "description": "Global cap table settings." },
-    "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." }
+    "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." },
+    "projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
+    "tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
+    "weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log." }
   }
 }
