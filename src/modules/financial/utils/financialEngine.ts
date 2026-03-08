@@ -1,8 +1,9 @@
+
 'use client';
 
 /**
  * @fileOverview Centralized financial calculation engine for UdyamRakshak.
- * Handles EBITDA, Margins, Runway, Burn Rate, and Budget Variance with INR support.
+ * Handles EBITDA, Margins, Runway, Burn Rate, Budget Variance, and Risk Analysis with INR support.
  */
 
 /**
@@ -212,6 +213,74 @@ export const generateInsights = (data: {
   }
   
   return reports;
+};
+
+/**
+ * Analyzes the risk profile based on "Guardian" logic.
+ * Proactive vs Reactive alerts for Insolvency, Dilution, and Efficiency.
+ */
+export const analyzeRiskProfile = (data: {
+  runway: number;
+  totalInvestorPct: number;
+  ebitdaMargin: number;
+  burnRate: number;
+  netRevenue: number;
+}) => {
+  const risks = [];
+
+  // 1. Survival Risk (Runway)
+  if (data.runway < 3) {
+    risks.push({
+      level: 'CRITICAL',
+      label: 'Insolvency Risk',
+      msg: 'Runway < 3 months. Immediate capital injection or 40% cost cut required.',
+      icon: 'AlertOctagon',
+      action: 'Execute Emergency Burn Reduction Plan'
+    });
+  } else if (data.runway < 6) {
+    risks.push({
+      level: 'WARNING',
+      label: 'Liquidity Stress',
+      msg: 'Runway < 6 months. Begin fundraising or pause non-essential hiring.',
+      icon: 'AlertTriangle',
+      action: 'Open Strategic Funding Round'
+    });
+  }
+
+  // 2. Governance Risk (Dilution)
+  if (data.totalInvestorPct > 45) {
+    risks.push({
+      level: 'CRITICAL',
+      label: 'Loss of Control',
+      msg: 'Investor equity exceeds 45%. Founders may lose board control in the next round.',
+      icon: 'Users',
+      action: 'Review Shareholder Agreement Control Clauses'
+    });
+  }
+
+  // 3. Efficiency Risk (EBITDA)
+  if (data.ebitdaMargin < 10) {
+    risks.push({
+      level: 'ADVISORY',
+      label: 'Margin Compression',
+      msg: 'EBITDA < 10%. Business model lacks operational leverage. Review COGS.',
+      icon: 'TrendingDown',
+      action: 'Conduct Category-Level Cost Rigidity Audit'
+    });
+  }
+
+  // 4. Cash Flow Risk
+  if (data.burnRate > data.netRevenue && data.netRevenue > 0) {
+    risks.push({
+      level: 'WARNING',
+      label: 'Negative Cash Cycle',
+      msg: 'Monthly burn exceeds revenue. Business is not yet self-sustaining.',
+      icon: 'TrendingDown',
+      action: 'Calibrate Revenue Velocity vs OpEx Burn'
+    });
+  }
+
+  return risks;
 };
 
 /**
