@@ -148,7 +148,7 @@ export default function TeamPage() {
              <div>
                 <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Members with performance scores > 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
+                  Members with performance scores &gt; 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
                 </p>
                 <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
                    <Clock className="h-4 w-4 mr-2" /> Performance Audit
