@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
 import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Mail, Shield, Award, Clock, Link as LinkIcon, CheckCircle2, Copy } from "lucide-react";
+import { UserPlus, Mail, Shield, Award, Copy, CheckCircle2, TrendingUp, Clock } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
@@ -28,7 +28,7 @@ export default function TeamPage() {
     navigator.clipboard.writeText(link);
     toast({
       title: "Invite Link Copied!",
-      description: "Send this to the member to finalize access.",
+      description: "Send this to the leader to finalize access.",
     });
   };
 
@@ -42,7 +42,7 @@ export default function TeamPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {leadership?.map((member, idx) => {
-          const vestingProgress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
+          const progress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
           const isPending = member.inviteStatus === "Pending";
 
           return (
@@ -72,21 +72,21 @@ export default function TeamPage() {
                     <p className="text-2xl font-bold text-[#0F172A]">{member.equityPct}%</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vesting Progress</p>
-                    <p className="text-sm font-bold text-blue-600">{vestingProgress}%</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vesting Status</p>
+                    <p className="text-sm font-bold text-blue-600">{progress}% Vested</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Progress value={parseFloat(vestingProgress)} className="h-2" />
+                  <Progress value={parseFloat(progress)} className="h-2" />
                   <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
-                    <span>{member.vestingYears}Y Term</span>
+                    <span>Term: {member.vestingYears}Y</span>
                     <span>Ends: {member.vestingEndDate}</span>
                   </div>
                 </div>
 
                 <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 min-h-[60px]">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Key Responsibility</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Responsibility</p>
                   <p className="text-xs text-slate-600 line-clamp-2">{member.responsibility || "Core operational strategy"}</p>
                 </div>
 
@@ -97,7 +97,7 @@ export default function TeamPage() {
                       className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold uppercase h-9"
                       onClick={() => copyInviteLink(member.id)}
                     >
-                      <Copy className="h-3 w-3 mr-2" /> Copy Invite Link
+                      <Copy className="h-3 w-3 mr-2" /> Invite Link
                     </Button>
                   ) : (
                     <Button variant="outline" className="flex-1 text-[10px] font-bold uppercase h-9 border-slate-200">
@@ -115,47 +115,50 @@ export default function TeamPage() {
               <Shield className="h-10 w-10 opacity-20" />
             </div>
             <h4 className="font-bold text-slate-600 text-lg font-headline">No Leadership DNA Detected</h4>
-            <p className="text-sm mt-1 max-w-xs">Add your core team to begin tracking equity distribution and vesting schedules.</p>
-            <div className="mt-6">
-              <AddLeadershipModal />
-            </div>
+            <p className="text-sm mt-1 mb-6 max-w-xs">Add your core team to begin tracking equity distribution and vesting schedules.</p>
+            <AddLeadershipModal />
           </Card>
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-xl bg-[#0F172A] text-white p-8 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-            <Award className="h-32 w-32" />
-          </div>
-          <div className="flex items-start gap-6 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-slate-200">
+        <Card className="border-none shadow-xl bg-[#0F172A] text-white p-8">
+          <div className="flex items-start gap-6">
              <div className="p-3 rounded-2xl bg-blue-500/20">
                 <Award className="h-8 w-8 text-blue-400" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 text-white font-headline">Vesting Enforcement</h3>
+                <h3 className="text-xl font-bold mb-2 font-headline">Vesting Enforcement</h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  UdyamRakshak automatically calculates equity release based on your governance rules. Ensure all team members have valid vesting start dates to maintain cap table compliance.
+                  UdyamRakshak automatically calculates equity release based on governance rules. Ensure all team members have valid vesting start dates to maintain compliance.
                 </p>
-                <Button variant="outline" className="text-white border-slate-700 hover:bg-slate-800 text-[10px] font-bold uppercase tracking-widest h-9">Review Governance Policy</Button>
+                <div className="flex gap-8">
+                  <div>
+                    <p className="text-2xl font-bold text-blue-400">{leadership?.length || 0}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Total Leaders</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-emerald-400">{leadership?.filter(m => m.inviteStatus === 'Active').length || 0}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Active Access</p>
+                  </div>
+                </div>
              </div>
           </div>
         </Card>
 
-        <Card className="border-none shadow-xl bg-emerald-50/30 border border-emerald-100 p-8 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-            <CheckCircle2 className="h-32 w-32" />
-          </div>
-          <div className="flex items-start gap-6 relative z-10">
+        <Card className="border-none shadow-xl bg-emerald-50/30 border border-emerald-100 p-8">
+          <div className="flex items-start gap-6">
              <div className="p-3 rounded-2xl bg-emerald-500/20">
                 <CheckCircle2 className="h-8 w-8 text-emerald-600" />
              </div>
              <div>
                 <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Stakeholder Handshake</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Once a member accepts their invitation, their profile is automatically linked to their user record, granting them role-based access to the war room.
+                  Once a member accepts their invitation, their profile is automatically linked to their Firestore user record, granting them role-based access to the war room.
                 </p>
-                <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">Invite History</Button>
+                <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
+                   <Clock className="h-4 w-4 mr-2" /> Access Audit Log
+                </Button>
              </div>
           </div>
         </Card>
