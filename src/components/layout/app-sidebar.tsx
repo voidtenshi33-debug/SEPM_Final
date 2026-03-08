@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -10,7 +9,6 @@ import {
   Rocket, 
   Briefcase, 
   TrendingUp, 
-  Megaphone, 
   BarChart3, 
   BrainCircuit, 
   ShieldCheck,
@@ -37,7 +35,7 @@ import {
 const mainNavItems = [
   { title: "Dashboard", icon: LayoutDashboard, url: "/" },
   { title: "Startup Profile", icon: Building2, url: "/profile" },
-  { title: "Finance Center", icon: Wallet, url: "/financial" },
+  { title: "War Room", icon: Wallet, url: "/financial" },
 ];
 
 const capitalNavItems = [
@@ -79,12 +77,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4 flex items-center gap-2">
-        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
+        <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-[#0F172A] text-white">
           <ShieldCheck className="size-6" />
         </div>
         <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-          <span className="font-headline font-bold text-lg text-white">StartupOS</span>
-          <span className="text-xs text-sidebar-foreground/70">Guardians of Growth</span>
+          <span className="font-headline font-bold text-lg text-slate-900">StartupOS</span>
+          <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Growth Guard</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -116,14 +114,14 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-sidebar-border/30 group-data-[collapsible=icon]:hidden">
+      <SidebarFooter className="p-4 border-t border-slate-100 group-data-[collapsible=icon]:hidden">
         <div className="flex items-center gap-3">
-          <div className="size-8 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-white">
+          <div className="size-8 rounded-full bg-[#3B82F6] flex items-center justify-center text-xs font-bold text-white">
             JD
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-medium">John Doe</span>
-            <span className="text-xs text-sidebar-foreground/60">Founder</span>
+            <span className="text-sm font-bold text-slate-900">John Doe</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Founder</span>
           </div>
         </div>
       </SidebarFooter>
