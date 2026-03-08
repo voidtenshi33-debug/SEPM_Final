@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
+import { collection, query, orderBy, limit, where } from "firebase/firestore";
 import { 
   calcEBITDA, 
   calcEBITDAMargin, 
   calcRunway, 
-  formatINR 
+  formatINR,
+  calculateExpenseDistribution
 } from "@/modules/financial/utils/financialEngine";
 import { 
   LineChart, 
@@ -17,7 +18,11 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from "recharts";
 import { 
   TrendingUp, 
@@ -25,26 +30,38 @@ import {
   Activity, 
   Wallet, 
   AlertCircle,
-  Loader2
+  Loader2,
+  PieChart as PieChartIcon
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { AddExpenseModal } from "@/components/financials/add-expense-modal";
+import { cn } from "@/lib/utils";
 
 export default function OperationalPage() {
   const [mounted, setMounted] = useState(false);
   const db = useFirestore();
   
-  // Real-time subscription to last 12 months of financial data
+  // Subscriptions
   const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('month', 'desc'), limit(12)), [db]);
-  const { data: financials, isLoading } = useCollection(finQuery);
-  
-  // Subscription to categories for the modal
   const catQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
+  const expQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
+
+  const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
   const { data: categories } = useCollection(catQuery);
+  const { data: expenses, isLoading: loadingExp } = useCollection(expQuery);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  if (loadingFin || loadingExp) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <p className="text-sm text-muted-foreground">Synchronizing operational metrics...</p>
+      </div>
+    );
+  }
 
   const currentMonth = financials?.[0];
   const prevMonth = financials?.[1];
@@ -58,7 +75,7 @@ export default function OperationalPage() {
   const prevOpEx = prevMonth?.operatingExpenses || 0;
   const prevEbitda = calcEBITDA(prevNetRev, prevOpEx);
 
-  const runway = calcRunway(42000000, opEx); // Mock ₹4.2Cr cash for demonstration
+  const runway = calcRunway(42000000, opEx); // Mock ₹4.2Cr cash
 
   const chartData = financials?.map(f => ({
     month: f.month,
@@ -66,14 +83,9 @@ export default function OperationalPage() {
     expenses: f.operatingExpenses,
   })).reverse() || [];
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 space-y-4">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
-        <p className="text-sm text-muted-foreground">Synchronizing operational metrics...</p>
-      </div>
-    );
-  }
+  // Categorical Analysis for Current Month
+  const currentMonthExpenses = expenses?.filter(e => e.month === currentMonth?.month) || [];
+  const distribution = calculateExpenseDistribution(currentMonthExpenses, categories || []);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
@@ -132,37 +144,147 @@ export default function OperationalPage() {
         </Card>
       </div>
 
-      {/* Primary Trend Chart */}
-      <Card className="border-none shadow-xl">
-        <CardHeader>
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Activity className="h-5 w-5 text-accent" />
-            Revenue vs Expenses Intelligence
-          </CardTitle>
-          <CardDescription>Historical performance in INR (₹)</CardDescription>
-        </CardHeader>
-        <CardContent className="h-[400px] p-6 pt-0">
-          {mounted ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(v) => `₹${v/100000}L`} />
-                <Tooltip 
-                  formatter={(value: number) => formatINR(value)}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
-                />
-                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={4} dot={{ r: 4, fill: '#3B82F6' }} name="Net Revenue" />
-                <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 4, fill: '#0F172A' }} name="OpEx" />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full w-full flex items-center justify-center bg-slate-50/50 rounded-lg">
-              <Activity className="h-8 w-8 text-slate-200 animate-pulse" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Primary Trend Chart */}
+        <Card className="border-none shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Activity className="h-5 w-5 text-accent" />
+              Revenue vs Expenses Intelligence
+            </CardTitle>
+            <CardDescription>Historical performance in INR (₹)</CardDescription>
+          </CardHeader>
+          <CardContent className="h-[400px] p-6 pt-0">
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B', fontSize: 10}} tickFormatter={(v) => `₹${v/100000}L`} />
+                  <Tooltip 
+                    formatter={(value: number) => formatINR(value)}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}
+                  />
+                  <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={4} dot={{ r: 4, fill: '#3B82F6' }} name="Net Revenue" />
+                  <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 4, fill: '#0F172A' }} name="OpEx" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center bg-slate-50/50 rounded-lg">
+                <Activity className="h-8 w-8 text-slate-200 animate-pulse" />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Expense Distribution Analysis */}
+        <Card className="border-none shadow-xl overflow-hidden">
+          <CardHeader className="bg-slate-50 border-b">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <PieChartIcon className="h-5 w-5 text-accent" />
+              Expense Distribution Breakdown
+            </CardTitle>
+            <CardDescription>Allocation for {currentMonth?.month || 'Current Month'}</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 h-full">
+              <div className="p-6 h-[300px]">
+                {mounted && distribution.categories.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={distribution.categories}
+                        dataKey="amount"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                      >
+                        {distribution.categories.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number, name: string, props: any) => [
+                          `${formatINR(value)} (${props.payload.percentage.toFixed(1)}%)`,
+                          name
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center text-center p-8 bg-slate-50/50 rounded-xl">
+                    <PieChartIcon className="h-10 w-10 text-slate-200 mb-2" />
+                    <p className="text-xs text-muted-foreground italic">No categorized expenses for this month.</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-6 bg-slate-50/50 flex flex-col justify-center border-l">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white border shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fixed Costs</span>
+                    </div>
+                    <span className="text-sm font-bold">{distribution.fixedPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-white border shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-amber-500" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Variable Costs</span>
+                    </div>
+                    <span className="text-sm font-bold">{distribution.variablePct.toFixed(1)}%</span>
+                  </div>
+                  <div className="pt-2 text-center">
+                    <p className="text-[10px] text-muted-foreground font-medium italic">
+                      {distribution.fixedPct > 70 ? "High cost rigidity detected. Review overhead." : "Healthy cost structure for scalability."}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+
+            {distribution.categories.length > 0 && (
+              <div className="p-6 pt-0 border-t">
+                <div className="relative overflow-auto max-h-[200px] mt-6">
+                  <table className="w-full text-xs text-left">
+                    <thead className="text-[10px] uppercase text-muted-foreground font-bold border-b">
+                      <tr>
+                        <th className="pb-2">Category</th>
+                        <th className="pb-2">Type</th>
+                        <th className="pb-2 text-right">Amount (₹)</th>
+                        <th className="pb-2 text-right">%</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {distribution.categories.map((item, i) => (
+                        <tr key={i} className="hover:bg-slate-50">
+                          <td className="py-2 font-medium flex items-center gap-2">
+                            <div className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                            {item.name}
+                          </td>
+                          <td className="py-2">
+                            <Badge variant="outline" className={cn(
+                              "text-[8px] h-4",
+                              item.type === 'Fixed' ? "border-blue-200 text-blue-700 bg-blue-50" : "border-amber-200 text-amber-700 bg-amber-50"
+                            )}>
+                              {item.type}
+                            </Badge>
+                          </td>
+                          <td className="py-2 text-right font-medium">{formatINR(item.amount)}</td>
+                          <td className="py-2 text-right font-bold text-accent">{item.percentage.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       {/* AI Intelligence Block */}
       <Card className="border-none shadow-lg bg-accent/5 border border-accent/10">

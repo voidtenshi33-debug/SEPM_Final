@@ -70,6 +70,46 @@ export function validateEquity(
 }
 
 /**
+ * Logic for calculating categorical distribution of expenses.
+ */
+export const calculateExpenseDistribution = (expenses: any[], categories: any[]) => {
+  const total = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+  if (total === 0) return { categories: [], fixedPct: 0, variablePct: 0, total: 0 };
+
+  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat }), {});
+
+  const distribution = expenses.reduce((acc, exp) => {
+    const cat = catMap[exp.categoryId];
+    const catId = exp.categoryId;
+    if (!acc[catId]) {
+      acc[catId] = {
+        name: cat?.name || "Uncategorized",
+        type: cat?.type || "Variable",
+        amount: 0,
+        color: cat?.color || "#94A3B8"
+      };
+    }
+    acc[catId].amount += exp.amount;
+    return acc;
+  }, {} as any);
+
+  const items = Object.values(distribution).map((item: any) => ({
+    ...item,
+    percentage: (item.amount / total) * 100
+  })).sort((a, b) => b.amount - a.amount);
+
+  const fixedAmount = items.filter(i => i.type === 'Fixed').reduce((s, i) => s + i.amount, 0);
+  const variableAmount = items.filter(i => i.type === 'Variable').reduce((s, i) => s + i.amount, 0);
+
+  return {
+    categories: items,
+    fixedPct: (fixedAmount / total) * 100,
+    variablePct: (variableAmount / total) * 100,
+    total
+  };
+};
+
+/**
  * Intelligence Layer Extensions
  */
 
