@@ -5,7 +5,7 @@ import { CapitalSection } from "@/components/financials/capital-section";
 import { Loader2 } from "lucide-react";
 
 export default function CapitalPage() {
-  const { rounds, investors, capTable, isLoading } = useFinancials();
+  const { rounds, investors, leadership, capTable, isLoading } = useFinancials();
 
   if (isLoading) {
     return (
@@ -20,6 +20,7 @@ export default function CapitalPage() {
       <CapitalSection 
         rounds={rounds} 
         investors={investors} 
+        leadership={leadership}
         capTable={capTable}
         onAddRound={() => {}}
         onAddInvestor={() => {}}

@@ -17,9 +17,9 @@ interface CapitalSectionProps {
   onAddInvestor: () => void;
 }
 
-export function CapitalSection({ rounds, investors, leadership, capTable, onAddRound, onAddInvestor }: CapitalSectionProps) {
+export function CapitalSection({ rounds, investors, leadership = [], capTable, onAddRound, onAddInvestor }: CapitalSectionProps) {
   // Aggregate Leadership Equity per Blueprint
-  const leadershipTotalEquity = leadership.reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
+  const leadershipTotalEquity = (leadership || []).reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   
   const pieData = [
     { name: "Founders", value: capTable?.founderEquityPct || 0, color: "#0F172A" },
