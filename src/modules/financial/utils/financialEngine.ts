@@ -27,6 +27,14 @@ export function calculateRunway(currentCash: number, monthlyBurn: number): numbe
 }
 
 /**
+ * Calculates Growth Percentage
+ */
+export function calculateGrowth(current: number, previous: number): number {
+  if (previous === 0) return 0;
+  return ((current - previous) / previous) * 100;
+}
+
+/**
  * Calculates remaining tenure in years for deals or vesting
  */
 export const calcRemainingTenure = (endDate: string | Date | null): string => {
@@ -43,7 +51,7 @@ export const calcRemainingTenure = (endDate: string | Date | null): string => {
 };
 
 /**
- * Formats currency to INR (₹)
+ * Formats currency to INR (₹) using en-IN locale
  */
 export const formatINR = (amount: number | undefined | null): string =>
   new Intl.NumberFormat("en-IN", {
@@ -53,7 +61,7 @@ export const formatINR = (amount: number | undefined | null): string =>
   }).format(amount || 0);
 
 /**
- * Validates cap table distribution
+ * Validates if the cap table total equity split is within the 100% threshold
  */
 export function validateEquity(
   founderPct: number, 
@@ -96,7 +104,8 @@ export const calculateServiceMetrics = (data: any, teamSize: number = 0) => ({
 });
 
 /**
- * Calculates Health Score (0-100)
+ * Calculates Health Score (0-100) based on Rakshak (Protector) logic.
+ * Deductions based on critical financial and equity benchmarks.
  */
 export const calculateHealthScore = (data: { 
   runway: number; 
@@ -133,24 +142,73 @@ export const calculateVestingProgress = (startDate: string | Date, years: number
 };
 
 /**
- * Aggregates monthly expenses by category
+ * Generates actionable strategic insights based on financial and capital state.
+ */
+export const generateInsights = (data: { 
+  runway: number; 
+  ebitdaMargin: number; 
+  burnRate: number;
+  netRevenue: number;
+  founderEquity: number;
+  totalInvestorEquity: number 
+}) => {
+  const reports = [];
+  
+  // Critical Alerts
+  if (data.runway < 6) {
+    reports.push({ 
+      level: 'CRITICAL', 
+      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
+      type: 'Survival',
+      icon: 'ShieldAlert'
+    });
+  }
+  
+  // Operational Advice
+  if (data.ebitdaMargin < 15) {
+    reports.push({ 
+      level: 'WARNING', 
+      msg: "EBITDA margin below benchmark. Review variable operating expenses.", 
+      type: 'Efficiency',
+      icon: 'Activity'
+    });
+  }
+  
+  // Capital Advice
+  if (data.totalInvestorEquity > 30) {
+    reports.push({ 
+      level: 'ADVISORY', 
+      msg: "High external dilution. Focus on hitting milestones before next round.", 
+      type: 'Governance',
+      icon: 'Users'
+    });
+  }
+  
+  return reports;
+};
+
+/**
+ * Aggregates monthly expenses by category and calculates percentages.
  */
 export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
   if (!monthlyExpenses || monthlyExpenses.length === 0 || !globalCategories) return [];
-  
+
+  // 1. Create Lookup Map
   const catMap = globalCategories.reduce((acc, cat) => ({ 
     ...acc, 
     [cat.id]: { name: cat.name, type: cat.type, color: cat.color || "#3B82F6" } 
   }), {} as Record<string, { name: string, type: string, color: string }>);
-  
+
+  // 2. Aggregate
   const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   
   const grouped = monthlyExpenses.reduce((acc, exp) => {
     const categoryId = exp.categoryId;
     const cat = catMap[categoryId] || { name: "Other", type: "Variable", color: "#94A3B8" };
+    
     if (!acc[categoryId]) {
       acc[categoryId] = { 
-        id: categoryId, 
+        id: categoryId,
         name: cat.name, 
         type: cat.type, 
         color: cat.color,
@@ -162,6 +220,19 @@ export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCate
     acc[categoryId].percentage = total > 0 ? parseFloat(((acc[categoryId].amount / total) * 100).toFixed(1)) : 0;
     return acc;
   }, {} as Record<string, any>);
-  
+
   return Object.values(grouped).sort((a, b) => b.amount - a.amount);
+};
+
+/**
+ * Groups expenses by their category type (Fixed/Variable)
+ */
+export const groupExpensesByType = (expenses: any[], categories: any[]) => {
+  const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
+  
+  return expenses.reduce((acc, exp) => {
+    const type = catMap[exp.categoryId] || "Variable";
+    acc[type] = (acc[type] || 0) + exp.amount;
+    return acc;
+  }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };

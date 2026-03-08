@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from "react";
@@ -60,10 +59,10 @@ export default function FinancialOverview() {
   const totalInvestorEquity = capTable?.totalInvestorEquityPct || 0;
   
   const validation = validateEquity(
-    capTable?.founderEquityPct || 0,
+    capTable?.founderPct || 0,
     totalLeadershipEquity,
     totalInvestorEquity,
-    capTable?.esopEquityPct || 0
+    capTable?.esopPct || 0
   );
 
   const chartData = [...financials].reverse().map(f => ({
