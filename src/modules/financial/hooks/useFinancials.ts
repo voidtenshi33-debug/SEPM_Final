@@ -61,13 +61,15 @@ export function useFinancials(startupId: string = "demo-startup") {
   const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
   const { data: capTable, isLoading: loadingCap } = useDoc(capTableRef);
 
+  const isLoading = isUserLoading || loadingFin || loadingRounds || loadingInv || loadingLead || loadingCap;
+
   return {
     financials: financials || [],
     rounds: rounds || [],
     investors: investors || [],
     leadership: leadership || [],
-    capTable,
-    isLoading: loadingFin || loadingRounds || loadingInv || loadingCap || loadingLead || isUserLoading,
+    capTable: capTable || null,
+    isLoading,
     latestMonth: financials && financials.length > 0 ? financials[0] : null,
     prevMonth: financials && financials.length > 1 ? financials[1] : null,
   };

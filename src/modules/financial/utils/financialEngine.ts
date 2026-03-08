@@ -8,23 +8,29 @@
  * EBITDA = Net Revenue - Operating Expenses
  */
 export const calcEBITDA = (netRevenue: number, opEx: number): number => 
-  netRevenue - opEx;
+  (netRevenue || 0) - (opEx || 0);
 
 /**
  * Calculates EBITDA Margin %.
  * EBITDA Margin % = (EBITDA / Net Revenue) * 100
  */
 export const calcEBITDAMargin = (ebitda: number, netRevenue: number): number => 
-  netRevenue > 0 ? (ebitda / netRevenue) * 100 : 0;
+  (netRevenue && netRevenue > 0) ? (ebitda / netRevenue) * 100 : 0;
 
 /**
  * Calculates remaining deal tenure in years.
  */
 export const calcRemainingTenure = (endDate: string): string => {
   if (!endDate) return "0.0";
-  const diff = new Date(endDate).getTime() - new Date().getTime();
-  const years = diff / (1000 * 60 * 60 * 24 * 365.25);
-  return years > 0 ? years.toFixed(1) : "0.0";
+  try {
+    const end = new Date(endDate).getTime();
+    const now = new Date().getTime();
+    const diff = end - now;
+    const years = diff / (1000 * 60 * 60 * 24 * 365.25);
+    return years > 0 ? years.toFixed(1) : "0.0";
+  } catch (e) {
+    return "0.0";
+  }
 };
 
 /**
@@ -32,7 +38,7 @@ export const calcRemainingTenure = (endDate: string): string => {
  */
 export const calcRunway = (cash: number, burn: number): number => {
   if (burn <= 0) return 99; // Effectively infinite
-  return cash / burn;
+  return (cash || 0) / burn;
 };
 
 /**
@@ -50,9 +56,9 @@ export const formatINR = (amount: number): string =>
  * Ensures the sum of all shareholders does not exceed 100%.
  */
 export function validateEquity(founder: number, leadership: number, investor: number, esop: number): { isValid: boolean; total: number } {
-  const total = founder + leadership + investor + esop;
+  const total = (founder || 0) + (leadership || 0) + (investor || 0) + (esop || 0);
   return {
-    isValid: total <= 100.01 && total >= 99.99, // Allow for floating point minor variance
+    isValid: total <= 100.01 && total >= 0,
     total: Number(total.toFixed(2))
   };
 }
