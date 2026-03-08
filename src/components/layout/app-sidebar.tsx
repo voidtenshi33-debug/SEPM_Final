@@ -17,10 +17,14 @@ import {
   Tags,
   Zap,
   Target,
-  FolderLock
+  FolderLock,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { Button } from "@/components/ui/button";
 
 import {
   Sidebar,
@@ -69,6 +73,24 @@ const aiNavItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const { user } = useUser();
+
+  const userInitials = React.useMemo(() => {
+    if (user?.displayName) {
+      return user.displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return "JD";
+  }, [user]);
+
+  const userName = user?.displayName || "Founder";
+
+  const handleLogout = () => {
+    signOut(auth);
+  };
 
   const NavList = ({ items }: { items: any[] }) => (
     <SidebarMenu>
@@ -139,15 +161,26 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t border-slate-100 group-data-[collapsible=icon]:hidden">
-        <div className="flex items-center gap-3">
-          <div className="size-8 rounded-full bg-[#3B82F6] flex items-center justify-center text-xs font-bold text-white">
-            JD
+      <SidebarFooter className="p-4 border-t border-slate-100">
+        <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center gap-3 group-data-[collapsible=icon]:hidden overflow-hidden">
+            <div className="size-8 rounded-full bg-[#3B82F6] flex items-center justify-center text-xs font-bold text-white shrink-0">
+              {userInitials}
+            </div>
+            <div className="flex flex-col overflow-hidden">
+              <span className="text-sm font-bold text-slate-900 truncate">{userName}</span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Founder</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-bold text-slate-900">John Doe</span>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Founder</span>
-          </div>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 shrink-0 rounded-lg"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         </div>
       </SidebarFooter>
     </Sidebar>
