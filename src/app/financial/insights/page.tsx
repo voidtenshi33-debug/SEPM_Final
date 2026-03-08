@@ -51,7 +51,7 @@ export default function FinancialInsightsPage() {
   let marketingVariancePct = 0;
 
   if (budget?.categoryBudgets && latestMonth) {
-    const monthExpenses = expenses.filter(e => e.month === latestMonth.id);
+    const monthExpenses = expenses.filter(e => e.month === latestMonth.id || e.monthId === latestMonth.id);
     const totalBud = budget.categoryBudgets.reduce((s: number, b: any) => s + b.budgetAmount, 0);
     const totalAct = monthExpenses.reduce((s: number, e: any) => s + e.amount, 0);
     
@@ -72,8 +72,7 @@ export default function FinancialInsightsPage() {
   // Prep data for engines
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const totalInvestorPct = (investors || []).reduce((sum, inv) => sum + (inv.equityPct || 0), 0);
-  const leadEquity = (leadership || []).reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
+  const totalInvestorPct = (investors || []).filter(i => i.status !== 'Cancelled').reduce((sum, inv) => sum + (inv.equityPct || 0), 0);
   
   // Mock cash for prototype
   const currentCash = 42000000;
@@ -141,7 +140,7 @@ export default function FinancialInsightsPage() {
     autoTable(doc, {
       startY: finalY + 20,
       head: [['Risk Level', 'Type', 'Recommended Action']],
-      body: risks.map(r => [r.level, r.label, r.action]),
+      body: risks.map(r => [r.level, r.label, r.action || 'Strategic Review']),
       theme: 'grid'
     });
 
