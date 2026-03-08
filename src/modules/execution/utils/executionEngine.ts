@@ -1,4 +1,3 @@
-
 'use client';
 
 /**
@@ -9,7 +8,7 @@
 
 export interface ProjectHealthResult {
   score: number;
-  status: 'Active' | 'Delayed' | 'At Risk' | 'Completed';
+  status: 'Active' | 'Delayed' | 'At Risk' | 'Completed' | 'No Execution Started';
   onTrack: boolean;
   progressPct: number;
   budgetUtilization: number;
@@ -28,6 +27,18 @@ export const calculateProjectHealth = (
   const today = new Date();
   const deadline = new Date(project.targetEndDate);
   
+  // 0. Handle No-Task Scenario
+  if (tasks.length === 0 && project.status === 'Active') {
+    return {
+      score: 0,
+      status: 'No Execution Started',
+      onTrack: false,
+      progressPct: 0,
+      budgetUtilization: 0,
+      riskReason: "No strategic tasks initialized"
+    };
+  }
+
   // 1. Task Completion Rate (25%)
   const completedTasks = tasks.filter(t => t.status === 'Completed').length;
   const progressPct = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
@@ -49,7 +60,6 @@ export const calculateProjectHealth = (
 
   // 4. Weekly Consistency (25%)
   const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  // Using lastUpdateAt as a proxy for last activity
   const tasksWithRecentUpdates = tasks.filter(t => {
     const lastActive = t.lastUpdateAt || t.createdAt;
     const date = lastActive?.toDate ? lastActive.toDate() : new Date(lastActive);
@@ -60,7 +70,7 @@ export const calculateProjectHealth = (
   // Weighted Total
   const totalHealth = (taskScore * 0.25) + (budgetScore * 0.25) + (deadlineScore * 0.25) + (consistencyScore * 0.25);
 
-  let status: 'Active' | 'Delayed' | 'At Risk' | 'Completed' = 'Active';
+  let status: 'Active' | 'Delayed' | 'At Risk' | 'Completed' | 'No Execution Started' = 'Active';
   let riskReason = "";
 
   if (progressPct === 100) status = 'Completed';
@@ -96,7 +106,7 @@ export const calculateMemberPerformance = (tasks: any[]) => {
 
   const completed = tasks.filter(t => t.status === 'Completed');
   const onTime = completed.filter(t => {
-    if (!t.completedAt || !t.deadline) return true; // Assume on-time if no completion data
+    if (!t.completedAt || !t.deadline) return true;
     const compDate = t.completedAt?.toDate ? t.completedAt.toDate() : new Date(t.completedAt);
     const deadlineDate = new Date(t.deadline);
     return compDate <= deadlineDate;

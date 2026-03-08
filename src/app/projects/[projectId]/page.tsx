@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from "react";
@@ -116,6 +115,10 @@ export default function ProjectDetailsPage() {
 
   const health = calculateProjectHealth(project, tasks || [], allExpenses || []);
 
+  const todoTasks = tasks?.filter(t => t.status === 'Todo') || [];
+  const inProgressTasks = tasks?.filter(t => t.status === 'In Progress') || [];
+  const completedTasks = tasks?.filter(t => t.status === 'Completed') || [];
+
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center gap-4 mb-4">
@@ -218,6 +221,7 @@ export default function ProjectDetailsPage() {
              health.status === 'Delayed' ? 'bg-rose-100 text-rose-700' :
              health.status === 'At Risk' ? 'bg-amber-100 text-amber-700' :
              health.status === 'Completed' ? 'bg-emerald-100 text-emerald-700' :
+             health.status === 'No Execution Started' ? 'bg-slate-100 text-slate-700' :
              'bg-blue-100 text-blue-700'
            }`}>
              {health.status} ({health.score}/100)
@@ -242,7 +246,7 @@ export default function ProjectDetailsPage() {
                 </div>
                 <Progress value={health.progressPct} className="h-2 bg-slate-50" />
                 <div className="flex items-center justify-between text-[10px] text-slate-400 font-bold uppercase">
-                  <span>{tasks?.filter(t => t.status === 'Completed').length || 0} Tasks Done</span>
+                  <span>{completedTasks.length} Tasks Done</span>
                   <span>{tasks?.length || 0} Total</span>
                 </div>
               </CardContent>
@@ -282,65 +286,57 @@ export default function ProjectDetailsPage() {
             </TabsList>
 
             <TabsContent value="tasks" className="space-y-4">
-              <div className="grid grid-cols-1 gap-3">
-                {tasks?.map((task) => (
-                  <Card key={task.id} className={`border-none shadow-sm hover:shadow-md transition-all border-l-4 ${
-                    task.status === 'Completed' ? 'border-l-emerald-500' :
-                    task.status === 'In Progress' ? 'border-l-blue-500' : 'border-l-slate-300'
-                  }`}>
-                    <CardContent className="p-5 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 flex-1">
-                        <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
-                          task.status === 'Completed' ? 'bg-emerald-50 text-emerald-600' :
-                          task.status === 'In Progress' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400'
-                        }`}>
-                          <CheckCircle2 className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h5 className="font-bold text-slate-900">{task.title}</h5>
-                            <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-bold">{task.assignedTo || 'Unassigned'}</span>
-                          </div>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> Due {task.deadline}
-                            </span>
-                            <Badge variant="outline" className="text-[8px] h-4 uppercase">{task.priority || 'Medium'}</Badge>
-                            {task.bonusEligible && <Badge className="bg-amber-100 text-amber-700 text-[8px] h-4 uppercase">Bonus Ready</Badge>}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="h-8 text-[10px] font-bold uppercase rounded-lg border-slate-200"
-                          onClick={() => setSelectedTask(task.id)}
-                        >
-                          Log Progress
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className={`h-8 w-8 rounded-lg ${task.status === 'Completed' ? 'text-emerald-600' : 'text-slate-300 hover:text-emerald-600'}`}
-                          onClick={() => updateDoc(doc(db, 'tasks', task.id), { 
-                            status: task.status === 'Completed' ? 'Todo' : 'Completed',
-                            completedAt: task.status !== 'Completed' ? new Date().toISOString() : null,
-                            bonusEligible: task.status !== 'Completed' && new Date() <= new Date(task.deadline)
-                          })}
-                        >
-                          <CheckCircle2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                {tasks?.length === 0 && (
-                  <div className="p-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-                    No strategic tasks initialized. Distribute work to begin.
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Tactical Queue (Todo) */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tactical Queue</span>
+                    <Badge variant="secondary" className="text-[8px]">{todoTasks.length}</Badge>
                   </div>
-                )}
+                  <div className="space-y-3">
+                    {todoTasks.map(task => (
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'In Progress' })} />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Active Execution (In Progress) */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Active Execution</span>
+                    <Badge variant="secondary" className="text-[8px] bg-blue-50 text-blue-600">{inProgressTasks.length}</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {inProgressTasks.map(task => (
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'Completed', completedAt: new Date().toISOString(), bonusEligible: new Date() <= new Date(task.deadline) })} isProgress />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Milestone Achieved (Completed) */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between px-2">
+                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Milestone Achieved</span>
+                    <Badge variant="secondary" className="text-[8px] bg-emerald-50 text-emerald-600">{completedTasks.length}</Badge>
+                  </div>
+                  <div className="space-y-3">
+                    {completedTasks.map(task => (
+                      <TaskCard key={task.id} task={task} onUpdate={() => setSelectedTask(task.id)} onStatusToggle={() => updateDoc(doc(db, 'tasks', task.id), { status: 'Todo' })} isCompleted />
+                    ))}
+                  </div>
+                </div>
               </div>
+
+              {tasks?.length === 0 && (
+                <div className="p-12 text-center text-slate-400 italic bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 flex flex-col items-center gap-4">
+                  <Target className="h-10 w-10 opacity-20" />
+                  <div className="space-y-1">
+                    <p className="font-bold text-slate-600">No tactical execution started.</p>
+                    <p className="text-xs">Distribute your first task to activate the pipeline monitor.</p>
+                  </div>
+                  <Button size="sm" onClick={() => setAssignModalOpen(true)} className="bg-blue-600 h-8 rounded-lg text-[10px] font-bold uppercase">Assign First Task</Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="performance">
@@ -441,13 +437,26 @@ export default function ProjectDetailsPage() {
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest border-b pb-2">Strategic History</p>
                 <div className="space-y-4">
-                  <div className="p-3 rounded-xl bg-white border border-slate-100 shadow-sm space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-blue-600">System</span>
-                      <span className="text-[8px] text-slate-400">Project History</span>
+                  {tasks?.filter(t => t.lastUpdateAt).length === 0 ? (
+                    <div className="p-3 rounded-xl bg-white border border-slate-100 shadow-sm space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-blue-600">System</span>
+                        <span className="text-[8px] text-slate-400">Project History</span>
+                      </div>
+                      <p className="text-xs text-slate-600 leading-relaxed">Strategic tracking active. Selection required for task updates.</p>
                     </div>
-                    <p className="text-xs text-slate-600 leading-relaxed">Strategic tracking active. Selection required for task updates.</p>
-                  </div>
+                  ) : (
+                    tasks?.filter(t => t.lastUpdateAt).map(t => (
+                      <div key={t.id} className="p-3 rounded-xl bg-white border border-slate-100 shadow-sm space-y-2 animate-in slide-in-from-right-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-blue-600">{t.assignedTo}</span>
+                          <span className="text-[8px] text-slate-400">{new Date(t.lastUpdateAt).toLocaleDateString()}</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-slate-900 truncate">RE: {t.title}</p>
+                        <p className="text-[10px] text-slate-500 italic">Progress logged.</p>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -467,5 +476,34 @@ export default function ProjectDetailsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function TaskCard({ task, onUpdate, onStatusToggle, isProgress, isCompleted }: { task: any, onUpdate: () => void, onStatusToggle: () => void, isProgress?: boolean, isCompleted?: boolean }) {
+  const isOverdue = !isCompleted && new Date() > new Date(task.deadline);
+
+  return (
+    <Card className={`border-none shadow-sm hover:shadow-md transition-all group border-l-4 ${
+      isCompleted ? 'border-l-emerald-500' : isProgress ? 'border-l-blue-500' : 'border-l-slate-300'
+    }`}>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <h5 className="font-bold text-slate-900 text-xs leading-snug">{task.title}</h5>
+          <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full shrink-0" onClick={onStatusToggle}>
+            {isCompleted ? <ArrowLeft className="h-3 w-3 text-slate-400" /> : <ArrowRight className="h-3 w-3 text-blue-600" />}
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="text-[8px] h-4 uppercase border-slate-200">{task.assignedTo}</Badge>
+          <span className={`text-[8px] font-bold uppercase tracking-tighter flex items-center gap-1 ${isOverdue ? 'text-rose-600' : 'text-slate-400'}`}>
+            <Clock className="h-2.5 w-2.5" /> {task.deadline}
+          </span>
+        </div>
+        <div className="pt-2 border-t border-slate-50 flex items-center justify-between">
+          <Badge className={`text-[7px] font-bold uppercase h-4 ${task.priority === 'High' ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-600'}`}>{task.priority}</Badge>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[8px] font-bold uppercase text-blue-600 hover:bg-blue-50" onClick={onUpdate}>Pulse Update</Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

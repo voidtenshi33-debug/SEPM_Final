@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import { formatINR, calculateRunway, calcEBITDA } from "@/modules/financial/utils/financialEngine";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
+import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import { calculateProjectHealth } from "@/modules/execution/utils/executionEngine";
 import { 
   AreaChart, 
   Area, 
@@ -33,13 +36,22 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
-  const { financials, latestMonth, leadership, isLoading } = useFinancials();
+  const { financials, latestMonth, leadership, isLoading: loadingFin } = useFinancials();
+  
+  const db = useFirestore();
+  const projectsQuery = useMemoFirebase(() => collection(db, 'projects'), [db]);
+  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
+  const expensesQuery = useMemoFirebase(() => collection(db, 'expenses'), [db]);
+
+  const { data: projects, isLoading: loadingProjects } = useCollection(projectsQuery);
+  const { data: tasks, isLoading: loadingTasks } = useCollection(tasksQuery);
+  const { data: expenses } = useCollection(expensesQuery);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  if (isLoading) {
+  if (loadingFin || loadingProjects || loadingTasks) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -54,6 +66,13 @@ export default function DashboardPage() {
   const runway = calculateRunway(42000000, currentBurn); // Mock cash balance for prototype
   const teamSize = leadership?.length || 0;
   
+  const activeProjects = projects?.filter(p => p.status === 'Active') || [];
+  const nearingCompletion = projects?.filter(p => {
+    const projectTasks = tasks?.filter(t => t.projectId === p.id) || [];
+    const health = calculateProjectHealth(p, projectTasks, expenses || []);
+    return health.progressPct > 70 && health.progressPct < 100;
+  }).length || 0;
+
   const chartData = [...financials].reverse().map(f => ({
     month: f.month,
     revenue: f.netRevenue,
@@ -79,8 +98,8 @@ export default function DashboardPage() {
     },
     {
       title: "Active Projects",
-      value: "8",
-      description: "3 nearing completion",
+      value: activeProjects.length.toString(),
+      description: `${nearingCompletion} nearing completion`,
       icon: Briefcase,
       color: "text-emerald-600",
       bg: "bg-emerald-50"
