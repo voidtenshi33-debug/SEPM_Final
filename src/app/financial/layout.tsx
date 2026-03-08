@@ -48,11 +48,11 @@ export default function FinancialLayout({ children }: { children: React.ReactNod
               className={cn(
                 "flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all rounded-lg whitespace-nowrap",
                 isActive 
-                  ? "bg-white text-[#3B82F6] shadow-sm" 
+                  ? "bg-white text-accent shadow-sm" 
                   : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
               )}
             >
-              <item.icon className={cn("h-4 w-4", isActive ? "text-[#3B82F6]" : "text-slate-400")} />
+              <item.icon className={cn("h-4 w-4", isActive ? "text-accent" : "text-slate-400")} />
               {item.name}
             </Link>
           );
