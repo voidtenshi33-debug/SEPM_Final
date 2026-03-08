@@ -1,9 +1,8 @@
-
 'use client';
 
 /**
  * @fileOverview Strategic Execution Brain for StartupOS.
- * Reconciles work progress, budget usage, and timeline to calculate accountability health.
+ * Reconciles work progress, budget usage, and performance accountability.
  */
 
 export interface ProjectHealthResult {
@@ -25,21 +24,17 @@ export function calculateProjectHealth(
   const today = new Date();
   const deadline = new Date(project.targetEndDate);
 
-  // 1. Progress Component (33%)
   const completedTasks = tasks.filter(t => t.status === 'Completed').length;
   const progressPct = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
 
-  // 2. Budget Component (33%)
   const budgetUtilization = project.budgetAllocated > 0 
     ? (project.budgetUsed / project.budgetAllocated) * 100 
     : 0;
   
-  // High utilization reduces score if it outpaces progress
   const budgetScore = budgetUtilization <= 100 
     ? 100 - Math.max(0, (budgetUtilization - progressPct) * 0.5) 
     : 0;
 
-  // 3. Time Component (34%)
   const isOverdue = today > deadline && progressPct < 100;
   const timeScore = isOverdue ? 0 : 100;
 
@@ -55,8 +50,67 @@ export function calculateProjectHealth(
 }
 
 /**
- * Rule-based task templates for quick project setup.
+ * Calculates a Performance Score for a team member based on task completion.
  */
+export function calculateMemberPerformance(tasks: any[]): number {
+  if (tasks.length === 0) return 100;
+  
+  const completed = tasks.filter(t => t.status === 'Completed');
+  const onTime = completed.filter(t => {
+    if (!t.completedAt || !t.deadline) return true;
+    return new Date(t.completedAt) <= new Date(t.deadline);
+  });
+
+  const completionRate = (completed.length / tasks.length) * 100;
+  const onTimeRate = completed.length > 0 ? (onTime.length / completed.length) * 100 : 100;
+
+  return Math.round((completionRate * 0.4) + (onTimeRate * 0.6));
+}
+
+/**
+ * Generates AI-driven strategic initiatives based on financial and model signals.
+ */
+export function getStrategicSuggestions(data: {
+  businessType: string;
+  revenueTrend: 'up' | 'down' | 'flat';
+  runway: number;
+  utilization?: number;
+}) {
+  const suggestions = [];
+
+  if (data.businessType === 'Product' && data.revenueTrend === 'flat') {
+    suggestions.push({
+      title: "Subscription Tier Launch",
+      reason: "Revenue has flattened. Recurring billing stabilizes cash flow.",
+      impact: "High",
+      risk: "Medium",
+      type: "Product"
+    });
+  }
+
+  if (data.businessType === 'Service' && (data.utilization || 0) < 60) {
+    suggestions.push({
+      title: "Outbound Sales Blitz",
+      reason: "Team utilization is below 60%. Excess capacity detected.",
+      impact: "High",
+      risk: "Low",
+      type: "Growth"
+    });
+  }
+
+  if (data.runway < 6) {
+    suggestions.push({
+      title: "Series A Data Room Prep",
+      reason: "Runway is under 6 months. Milestone readiness is critical for survival.",
+      impact: "Critical",
+      risk: "High",
+      type: "Fundraising"
+    });
+  }
+
+  return suggestions;
+}
+
 export function generateTaskTemplate(type: 'Fundraising' | 'Product' | 'Growth' | 'Infrastructure'): Partial<{ title: string; status: string }[]> {
   const templates = {
     Fundraising: [

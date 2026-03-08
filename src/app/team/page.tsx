@@ -4,11 +4,12 @@ import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Mail, Shield, Award, Copy, CheckCircle2, TrendingUp, Clock } from "lucide-react";
+import { UserPlus, Mail, Shield, Award, Copy, CheckCircle2, TrendingUp, Clock, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
+import { calculateMemberPerformance } from "@/modules/execution/utils/executionEngine";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AddLeadershipModal } from "@/components/financials/add-leadership-modal";
@@ -21,7 +22,10 @@ export default function TeamPage() {
   const { toast } = useToast();
   
   const leadershipQuery = useMemoFirebase(() => query(collection(db, 'leadership'), orderBy('name', 'asc')), [db]);
-  const { data: leadership, isLoading } = useCollection(leadershipQuery);
+  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
+
+  const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
+  const { data: tasks } = useCollection(tasksQuery);
 
   const copyInviteLink = (memberId: string) => {
     const link = `${window.location.origin}/accept-invite?id=${memberId}`;
@@ -35,8 +39,8 @@ export default function TeamPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <PageHeader 
-        title="Leadership & Governance" 
-        description="Strategic team oversight, equity vesting enforcement, and invitation management."
+        title="Performance & Governance" 
+        description="Unified oversight of team accountability, equity vesting, and execution throughput."
         actions={<AddLeadershipModal />}
       />
 
@@ -44,6 +48,11 @@ export default function TeamPage() {
         {leadership?.map((member, idx) => {
           const progress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
           const isPending = member.inviteStatus === "Pending";
+          
+          const memberTasks = tasks?.filter(t => t.assignedTo === member.name) || [];
+          const performanceScore = calculateMemberPerformance(memberTasks);
+          const activeTasks = memberTasks.filter(t => t.status !== 'Completed').length;
+          const overdueTasks = memberTasks.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length;
 
           return (
             <Card key={member.id} className="border-none shadow-xl hover:shadow-2xl transition-all overflow-hidden border-l-4" style={{ borderLeftColor: isPending ? '#F59E0B' : '#10B981' }}>
@@ -57,8 +66,8 @@ export default function TeamPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
                       <h3 className="font-bold text-slate-900 truncate text-lg">{member.name}</h3>
-                      <Badge variant={isPending ? "outline" : "default"} className={isPending ? "bg-amber-50 text-amber-600 border-amber-100 uppercase text-[8px] font-bold" : "bg-emerald-50 text-emerald-700 border-emerald-100 uppercase text-[8px] font-bold"}>
-                        {member.inviteStatus}
+                      <Badge className={performanceScore > 80 ? "bg-emerald-500" : performanceScore > 50 ? "bg-amber-500" : "bg-rose-500"}>
+                        {performanceScore}%
                       </Badge>
                     </div>
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">{member.title}</p>
@@ -67,27 +76,22 @@ export default function TeamPage() {
               </CardHeader>
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Equity Stake</p>
-                    <p className="text-2xl font-bold text-[#0F172A]">{member.equityPct}%</p>
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Tasks</p>
+                    <p className="text-xl font-bold text-slate-900">{activeTasks}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Vesting Status</p>
-                    <p className="text-sm font-bold text-blue-600">{progress}% Vested</p>
+                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue</p>
+                    <p className={`text-xl font-bold ${overdueTasks > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{overdueTasks}</p>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Progress value={parseFloat(progress)} className="h-2" />
-                  <div className="flex justify-between text-[9px] text-slate-400 font-bold uppercase tracking-tighter">
-                    <span>Term: {member.vestingYears}Y</span>
-                    <span>Ends: {member.vestingEndDate}</span>
+                  <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
+                    <span>Equity Vested</span>
+                    <span>{progress}%</span>
                   </div>
-                </div>
-
-                <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 min-h-[60px]">
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Responsibility</p>
-                  <p className="text-xs text-slate-600 line-clamp-2">{member.responsibility || "Core operational strategy"}</p>
+                  <Progress value={parseFloat(progress)} className="h-1.5" />
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -109,28 +113,18 @@ export default function TeamPage() {
             </Card>
           );
         })}
-        {leadership?.length === 0 && !isLoading && (
-          <Card className="col-span-full border-2 border-dashed border-slate-200 bg-slate-50/50 flex flex-col items-center justify-center p-16 text-center text-slate-400">
-            <div className="p-4 rounded-full bg-slate-100 mb-4">
-              <Shield className="h-10 w-10 opacity-20" />
-            </div>
-            <h4 className="font-bold text-slate-600 text-lg font-headline">No Leadership DNA Detected</h4>
-            <p className="text-sm mt-1 mb-6 max-w-xs">Add your core team to begin tracking equity distribution and vesting schedules.</p>
-            <AddLeadershipModal />
-          </Card>
-        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-slate-200">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t">
         <Card className="border-none shadow-xl bg-[#0F172A] text-white p-8">
           <div className="flex items-start gap-6">
              <div className="p-3 rounded-2xl bg-blue-500/20">
-                <Award className="h-8 w-8 text-blue-400" />
+                <Shield className="h-8 w-8 text-blue-400" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 font-headline">Vesting Enforcement</h3>
+                <h3 className="text-xl font-bold mb-2 font-headline">Accountability Layer</h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  UdyamRakshak automatically calculates equity release based on governance rules. Ensure all team members have valid vesting start dates to maintain compliance.
+                  Performance scores are dynamically calculated using on-time task completion and milestone throughput. This data is confidential and visible only to the founding leadership.
                 </p>
                 <div className="flex gap-8">
                   <div>
@@ -138,8 +132,8 @@ export default function TeamPage() {
                     <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Total Leaders</p>
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-emerald-400">{leadership?.filter(m => m.inviteStatus === 'Active').length || 0}</p>
-                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Active Access</p>
+                    <p className="text-2xl font-bold text-emerald-400">{tasks?.filter(t => t.status === 'Completed').length || 0}</p>
+                    <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Tasks Shipped</p>
                   </div>
                 </div>
              </div>
@@ -149,15 +143,15 @@ export default function TeamPage() {
         <Card className="border-none shadow-xl bg-emerald-50/30 border border-emerald-100 p-8">
           <div className="flex items-start gap-6">
              <div className="p-3 rounded-2xl bg-emerald-500/20">
-                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+                <Award className="h-8 w-8 text-emerald-600" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Stakeholder Handshake</h3>
+                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Once a member accepts their invitation, their profile is automatically linked to their Firestore user record, granting them role-based access to the war room.
+                  Members with performance scores > 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
                 </p>
                 <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
-                   <Clock className="h-4 w-4 mr-2" /> Access Audit Log
+                   <Clock className="h-4 w-4 mr-2" /> Performance Audit
                 </Button>
              </div>
           </div>

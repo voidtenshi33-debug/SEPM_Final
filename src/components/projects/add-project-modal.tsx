@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Target, Sparkles } from 'lucide-react';
+import { Plus, Target, Sparkles, TrendingUp } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -28,7 +27,6 @@ export function AddProjectModal() {
     const projectName = formData.get('name') as string;
 
     try {
-      // 1. Create Project
       const projectRef = await addDoc(collection(db, 'projects'), {
         name: projectName,
         type: projectType,
@@ -36,11 +34,12 @@ export function AddProjectModal() {
         budgetUsed: 0,
         targetEndDate: formData.get('endDate') as string,
         description: formData.get('description') as string,
+        expectedROI: formData.get('roi') as string,
+        alignmentScore: Number(formData.get('alignment')),
         status: "Active",
         createdAt: serverTimestamp(),
       });
 
-      // 2. Auto-generate Task Template
       const templateTasks = generateTaskTemplate(projectType);
       const batchPromises = templateTasks.map(task => 
         addDoc(collection(db, 'tasks'), {
@@ -48,6 +47,9 @@ export function AddProjectModal() {
           projectId: projectRef.id,
           deadline: formData.get('endDate') as string,
           assignedTo: "Founder",
+          impactType: "Product",
+          estimatedHours: 10,
+          bonusEligible: false,
           createdAt: serverTimestamp(),
         })
       );
@@ -80,14 +82,15 @@ export function AddProjectModal() {
               Define Strategic Project
             </DialogTitle>
             <DialogDescription>
-              UdyamRakshak will auto-populate execution templates based on the type.
+              Map tactical execution to high-level ROI and budget accountability.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto pr-2">
             <div className="space-y-2">
               <Label htmlFor="name">Project Name</Label>
               <Input id="name" name="name" placeholder="e.g., Series A Prep" required />
             </div>
+            
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="type">Project Type</Label>
@@ -108,6 +111,18 @@ export function AddProjectModal() {
                 <Input id="budget" name="budget" type="number" placeholder="0" required />
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="roi">Expected ROI</Label>
+                <Input id="roi" name="roi" placeholder="e.g. 3x MRR" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="alignment">Alignment Score (1-10)</Label>
+                <Input id="alignment" name="alignment" type="number" min="1" max="10" defaultValue="8" />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="endDate">Target Deadline</Label>
               <Input id="endDate" name="endDate" type="date" required />
