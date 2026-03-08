@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, addDoc, doc, deleteDoc, query, orderBy } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,7 @@ import {
   Plus, 
   Trash2, 
   Search, 
-  AlertCircle,
   Loader2,
-  Sparkles,
   PieChart as PieChartIcon,
   ReceiptText,
   Calendar
@@ -64,41 +62,44 @@ const DEFAULT_CATEGORIES = [
 
 export default function CategoryPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isAdding, setIsAdding] = React.useState(false);
   const [isSeeding, setIsSeeding] = React.useState(false);
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().toISOString().substring(0, 7));
 
-  // Firestore Queries
-  const categoriesQuery = useMemoFirebase(() => 
-    query(collection(firestore, "expenseCategories"), orderBy("name", "asc")),
-  [firestore]);
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "users", user.uid, "expenseCategories"), orderBy("name", "asc"));
+  }, [firestore, user]);
   
-  const expensesQuery = useMemoFirebase(() => 
-    collection(firestore, "expenses"),
-  [firestore]);
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(firestore, "users", user.uid, "expenses");
+  }, [firestore, user]);
 
-  const financialsQuery = useMemoFirebase(() => 
-    query(collection(firestore, "financials"), orderBy("month", "desc")),
-  [firestore]);
+  const financialsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(firestore, "users", user.uid, "financials"), orderBy("id", "desc"));
+  }, [firestore, user]);
 
   const { data: categories, isLoading: loadingCats } = useCollection(categoriesQuery);
   const { data: expenses, isLoading: loadingExps } = useCollection(expensesQuery);
   const { data: financials } = useCollection(financialsQuery);
 
-  // Auto-seeding logic
   React.useEffect(() => {
-    if (categories && categories.length === 0 && !isSeeding) {
+    if (categories && categories.length === 0 && !isSeeding && user) {
       handleSeedCategories();
     }
-  }, [categories]);
+  }, [categories, user]);
 
   const handleSeedCategories = async () => {
+    if (!user) return;
     setIsSeeding(true);
     try {
       const batchPromises = DEFAULT_CATEGORIES.map(cat => 
-        addDoc(collection(firestore, "expenseCategories"), cat)
+        addDoc(collection(firestore, "users", user.uid, "expenseCategories"), cat)
       );
       await Promise.all(batchPromises);
       toast({
@@ -113,18 +114,19 @@ export default function CategoryPage() {
   };
 
   const handleDelete = async (id: string) => {
+    if (!user) return;
     const isUsed = expenses?.some(exp => exp.categoryId === id);
     if (isUsed) {
       toast({
         title: "Delete Protected",
-        description: "This category is linked to existing expenses and cannot be removed.",
+        description: "This category is linked to existing expenses.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      await deleteDoc(doc(firestore, "expenseCategories", id));
+      await deleteDoc(doc(firestore, "users", user.uid, "expenseCategories", id));
       toast({ title: "Category deleted" });
     } catch (e) {
       toast({ title: "Delete failed", variant: "destructive" });
@@ -132,6 +134,7 @@ export default function CategoryPage() {
   };
 
   const handleAddCategory = async (e: React.FormEvent<HTMLFormElement>) => {
+    if (!user) return;
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
@@ -141,7 +144,7 @@ export default function CategoryPage() {
     if (!name || !type) return;
 
     try {
-      await addDoc(collection(firestore, "expenseCategories"), { name, type, color });
+      await addDoc(collection(firestore, "users", user.uid, "expenseCategories"), { name, type, color });
       setIsAdding(false);
       toast({ title: "Category added successfully" });
     } catch (e) {
@@ -153,8 +156,7 @@ export default function CategoryPage() {
     cat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Distribution Logic for Selected Month
-  const monthlyExpenses = expenses?.filter(e => e.month === selectedMonth) || [];
+  const monthlyExpenses = expenses?.filter(e => e.monthId === selectedMonth || e.month === selectedMonth) || [];
   const distributionData = getMonthlyDistribution(monthlyExpenses, categories || []);
   
   const fixedTotal = distributionData.filter(d => d.type === 'Fixed').reduce((s, d) => s + d.amount, 0);
@@ -175,7 +177,6 @@ export default function CategoryPage() {
 
   return (
     <div className="space-y-12 animate-in fade-in duration-500 pb-20">
-      {/* 1. Category Manager Section */}
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -275,7 +276,6 @@ export default function CategoryPage() {
         </div>
       </div>
 
-      {/* 2. Expense Distribution Intelligence Section */}
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
@@ -293,7 +293,7 @@ export default function CategoryPage() {
                 </SelectTrigger>
                 <SelectContent>
                    {financials?.map(f => (
-                     <SelectItem key={f.month} value={f.month}>{f.month}</SelectItem>
+                     <SelectItem key={f.id} value={f.id}>{f.id}</SelectItem>
                    ))}
                    {(!financials || financials.length === 0) && (
                      <SelectItem value={selectedMonth}>{selectedMonth}</SelectItem>
@@ -394,26 +394,13 @@ export default function CategoryPage() {
                 <div>
                   <h4 className="font-bold text-slate-900 text-lg">No Data Recorded for {selectedMonth}</h4>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-2">
-                    Start logging categorical expenses in the Operational tab to unlock distribution insights.
+                    Start logging categorical expenses in the Operational tab.
                   </p>
                 </div>
               </div>
             )}
           </CardContent>
         </Card>
-      </div>
-
-      <div className="p-8 bg-primary text-primary-foreground rounded-3xl flex items-start gap-6 shadow-2xl relative overflow-hidden group">
-        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-           <PieChartIcon className="h-32 w-32" />
-        </div>
-        <Sparkles className="h-8 w-8 text-accent shrink-0 mt-1" />
-        <div className="space-y-2 relative z-10">
-          <h4 className="text-xl font-bold font-headline">The Rakshak Advantage</h4>
-          <p className="text-base opacity-80 leading-relaxed max-w-2xl">
-            By forcing every expense into a classification bucket, we provide mathematical certainty. Your <strong>Fixed Cost Rigidity</strong> tells you how much of your burn is immovable, while <strong>Variable Elasticity</strong> identifies exactly where you can cut to extend runway in a crisis.
-          </p>
-        </div>
       </div>
     </div>
   );

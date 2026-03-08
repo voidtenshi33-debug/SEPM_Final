@@ -10,14 +10,13 @@ import {
   FolderLock, 
   Lock, 
   Unlock, 
-  MoreVertical, 
   Search, 
   Plus, 
   Loader2,
   FileDown,
   ShieldCheck
 } from "lucide-react";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy, addDoc, doc, updateDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -25,19 +24,25 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function DocumentsPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [search, setSearch] = useState("");
 
-  const docsQuery = useMemoFirebase(() => query(collection(db, 'documents'), orderBy('lastModified', 'desc')), [db]);
+  const docsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'documents'), orderBy('lastModified', 'desc'));
+  }, [db, user]);
   const { data: documents, isLoading } = useCollection(docsQuery);
 
   const handleToggleLock = async (docId: string, currentStatus: boolean) => {
-    await updateDoc(doc(db, 'documents', docId), { isLocked: !currentStatus });
+    if (!user) return;
+    await updateDoc(doc(db, 'users', user.uid, 'documents', docId), { isLocked: !currentStatus });
     toast({ title: !currentStatus ? "Document Secured" : "Access Decrypted" });
   };
 
   const handleAddSample = async () => {
-    await addDoc(collection(db, 'documents'), {
+    if (!user) return;
+    await addDoc(collection(db, 'users', user.uid, 'documents'), {
       name: "Q3 Strategic Growth Brief",
       type: "PDF / Strategic",
       lastModified: new Date().toISOString(),

@@ -1,3 +1,4 @@
+
 "use client"
 
 import React, { useState } from "react"
@@ -7,15 +8,15 @@ import { Button } from "@/components/ui/button"
 import { BrainCircuit, Sparkles, AlertCircle, CheckCircle2, Loader2, ArrowRight, Zap, Target, TrendingUp, ShieldCheck, Activity } from "lucide-react"
 import { aiStrategicGrowthInsights, type AiStrategicGrowthInsightsOutput } from "@/ai/flows/ai-strategic-growth-insights"
 import { useToast } from "@/hooks/use-toast"
-import { useFirestore, useDoc, useCollection } from "@/firebase"
+import { useFirestore, useDoc, useCollection, useUser, useMemoFirebase } from "@/firebase"
 import { doc, collection, writeBatch, serverTimestamp } from "firebase/firestore"
-import { useMemoFirebase } from "@/firebase/provider"
 import { getStrategicRecommendations, generateTaskTemplate } from "@/modules/execution/utils/executionEngine"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { calculateRunway, formatINR } from "@/modules/financial/utils/financialEngine"
 
 export default function AIInsightsPage() {
+  const { user } = useUser();
   const [loading, setLoading] = useState(false)
   const [insights, setInsights] = useState<AiStrategicGrowthInsightsOutput | null>(null)
   const [creatingProject, setCreatingProject] = useState<string | null>(null)
@@ -23,24 +24,34 @@ export default function AIInsightsPage() {
   const db = useFirestore()
   const { toast } = useToast()
 
-  const profileRef = useMemoFirebase(() => doc(db, 'startupProfile', 'main'), [db])
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid, 'startupProfile', 'main');
+  }, [db, user]);
   const { data: profile } = useDoc(profileRef)
 
-  const financialsQuery = useMemoFirebase(() => collection(db, 'financials'), [db])
+  const financialsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'financials');
+  }, [db, user]);
   const { data: financials } = useCollection(financialsQuery)
 
-  const projectsQuery = useMemoFirebase(() => collection(db, 'projects'), [db])
+  const projectsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'projects');
+  }, [db, user]);
   const { data: projects } = useCollection(projectsQuery)
 
-  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db])
+  const tasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'tasks');
+  }, [db, user]);
   const { data: tasks } = useCollection(tasksQuery)
 
   const latestMonth = financials && financials.length > 0 ? financials[0] : null;
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
   
-  // Real Runway Calc (Using baseline if profile doesn't have it)
-  const currentCash = 1000000; 
-  const runway = currentBurn > 0 ? calculateRunway(currentCash, currentBurn) : 99;
+  const runway = currentBurn > 0 ? calculateRunway(0, currentBurn) : 99;
 
   const recommendations = React.useMemo(() => {
     return getStrategicRecommendations(profile, financials || [], runway);
@@ -58,6 +69,7 @@ export default function AIInsightsPage() {
   }, [projects, tasks]);
 
   const generateInsights = async () => {
+    if (!user) return;
     setLoading(true)
     try {
       const data = {
@@ -86,9 +98,10 @@ export default function AIInsightsPage() {
   }
 
   const convertToInitiative = async (rec: any) => {
+    if (!user) return;
     setCreatingProject(rec.id)
     try {
-      const projectRef = doc(collection(db, 'projects'))
+      const projectRef = doc(collection(db, 'users', user.uid, 'projects'))
       const batch = writeBatch(db)
 
       batch.set(projectRef, {
@@ -104,7 +117,7 @@ export default function AIInsightsPage() {
 
       const templateTasks = generateTaskTemplate(rec.template)
       templateTasks.forEach(t => {
-        const taskRef = doc(collection(db, 'tasks'))
+        const taskRef = doc(collection(db, 'users', user.uid, 'tasks'))
         batch.set(taskRef, {
           ...t,
           projectId: projectRef.id,
@@ -136,7 +149,6 @@ export default function AIInsightsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          {/* Strategic Recommendations - Rule Based */}
           <section className="space-y-4">
             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
               <ShieldCheck className="h-4 w-4 text-blue-600" />
@@ -183,7 +195,6 @@ export default function AIInsightsPage() {
             </div>
           </section>
 
-          {/* Generative Insights */}
           {!insights ? (
             <Card className="border-2 border-dashed border-slate-200 bg-slate-50/50">
               <CardContent className="flex flex-col items-center justify-center p-12 text-center">

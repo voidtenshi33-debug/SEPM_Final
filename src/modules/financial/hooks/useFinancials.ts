@@ -6,67 +6,68 @@ import { collection, query, orderBy, limit, doc } from "firebase/firestore";
 
 /**
  * Custom hook to provide real-time financial and governance data.
- * Synchronized with refined backend.json schema.
+ * Multi-tenant aware: fetches data from /users/{userId}/...
  */
 export function useFinancials(selectedMonth?: string) {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const userId = user?.uid;
 
   const currentMonthId = selectedMonth || new Date().toISOString().substring(0, 7);
 
   // 1. Monthly Financials
   const financialsQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return query(collection(firestore, "financials"), orderBy("id", "desc"), limit(12));
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return query(collection(firestore, "users", userId, "financials"), orderBy("id", "desc"), limit(12));
+  }, [firestore, userId]);
   
-  // 2. Funding Rounds - Order by roundDate per schema
+  // 2. Funding Rounds
   const roundsQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return query(collection(firestore, "rounds"), orderBy("roundDate", "desc"));
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return query(collection(firestore, "users", userId, "rounds"), orderBy("roundDate", "desc"));
+  }, [firestore, userId]);
 
   // 3. Investors
   const investorsQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return collection(firestore, "investors");
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return collection(firestore, "users", userId, "investors");
+  }, [firestore, userId]);
 
   // 4. Leadership Team
   const leadershipQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return collection(firestore, "leadership");
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return collection(firestore, "users", userId, "leadership");
+  }, [firestore, userId]);
 
   // 5. Cap Table Singleton
   const capTableRef = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return doc(firestore, "capitalStructure", "main");
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return doc(firestore, "users", userId, "capitalStructure", "main");
+  }, [firestore, userId]);
 
   // 6. Expense Categories
   const categoriesQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return query(collection(firestore, "expenseCategories"), orderBy("name", "asc"));
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return query(collection(firestore, "users", userId, "expenseCategories"), orderBy("name", "asc"));
+  }, [firestore, userId]);
 
   // 7. All Expenses
   const expensesQuery = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return collection(firestore, "expenses");
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return collection(firestore, "users", userId, "expenses");
+  }, [firestore, userId]);
 
   // 8. Startup Profile
   const profileRef = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return doc(firestore, "startupProfile", "main");
-  }, [firestore, user, isUserLoading]);
+    if (!userId) return null;
+    return doc(firestore, "users", userId, "startupProfile", "main");
+  }, [firestore, userId]);
 
   // 9. Budget for selected month
   const budgetRef = useMemoFirebase(() => {
-    if (!user || isUserLoading) return null;
-    return doc(firestore, "budgets", currentMonthId);
-  }, [firestore, user, isUserLoading, currentMonthId]);
+    if (!userId) return null;
+    return doc(firestore, "users", userId, "budgets", currentMonthId);
+  }, [firestore, userId, currentMonthId]);
 
   const { data: financials, isLoading: loadingFin } = useCollection(financialsQuery);
   const { data: rounds, isLoading: loadingRounds } = useCollection(roundsQuery);

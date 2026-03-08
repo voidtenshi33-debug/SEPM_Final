@@ -1,8 +1,9 @@
+
 'use client';
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection, useDoc } from "@/firebase";
+import { useFirestore, useCollection, useDoc, useUser } from "@/firebase";
 import { collection, query, orderBy, where, doc } from "firebase/firestore";
 import { useMemoFirebase } from "@/firebase/provider";
 import { 
@@ -14,8 +15,6 @@ import {
   Target, 
   TrendingUp, 
   TrendingDown, 
-  CheckCircle2, 
-  AlertCircle,
   Calendar,
   Sparkles,
   Info
@@ -26,6 +25,7 @@ import { SetBudgetModal } from "@/components/financials/set-budget-modal";
 import { Progress } from "@/components/ui/progress";
 
 export default function BudgetingPage() {
+  const { user } = useUser();
   const [mounted, setMounted] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const db = useFirestore();
@@ -34,8 +34,10 @@ export default function BudgetingPage() {
     setMounted(true);
   }, []);
 
-  // Fetch available months
-  const financialsQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('id', 'desc')), [db]);
+  const financialsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'financials'), orderBy('id', 'desc'));
+  }, [db, user]);
   const { data: financials } = useCollection(financialsQuery);
 
   useEffect(() => {
@@ -44,17 +46,22 @@ export default function BudgetingPage() {
     }
   }, [financials, selectedMonth]);
 
-  // Fetch data for selected month
-  const budgetRef = useMemoFirebase(() => selectedMonth ? doc(db, 'budgets', selectedMonth) : null, [db, selectedMonth]);
+  const budgetRef = useMemoFirebase(() => {
+    if (!user || !selectedMonth) return null;
+    return doc(db, 'users', user.uid, 'budgets', selectedMonth);
+  }, [db, user, selectedMonth]);
   const { data: budgetData } = useDoc(budgetRef);
 
-  const categoriesQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'expenseCategories');
+  }, [db, user]);
   const { data: categories } = useCollection(categoriesQuery);
 
-  const expensesQuery = useMemoFirebase(() => 
-    selectedMonth ? query(collection(db, 'expenses'), where('monthId', '==', selectedMonth)) : null, 
-    [db, selectedMonth]
-  );
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user || !selectedMonth) return null;
+    return query(collection(db, 'users', user.uid, 'expenses'), where('monthId', '==', selectedMonth));
+  }, [db, user, selectedMonth]);
   const { data: expenses } = useCollection(expensesQuery);
 
   const distribution = React.useMemo(() => {
@@ -84,7 +91,7 @@ export default function BudgetingPage() {
   const totalActual = budgetItems.reduce((sum, item) => sum + item.actualAmount, 0);
   const totalVariance = calculateBudgetVariance(totalActual, totalBudget);
 
-  if (!mounted) return null;
+  if (!mounted || !user) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
@@ -118,7 +125,6 @@ export default function BudgetingPage() {
         </div>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="border-none shadow-sm">
           <CardContent className="p-6">
@@ -152,7 +158,6 @@ export default function BudgetingPage() {
         </Card>
       </div>
 
-      {/* Detailed Variance Table */}
       <Card className="border-none shadow-sm overflow-hidden bg-white">
         <CardHeader className="bg-slate-50/50 border-b border-slate-100">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -222,7 +227,7 @@ export default function BudgetingPage() {
                 {budgetItems.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">
-                      No budget records found for {selectedMonth}. Click "Set Targets" to begin.
+                      No budget records found for {selectedMonth}.
                     </td>
                   </tr>
                 )}
@@ -232,7 +237,6 @@ export default function BudgetingPage() {
         </CardContent>
       </Card>
 
-      {/* AI Budget Intelligence */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="border-none shadow-sm bg-blue-50/50 border border-blue-100 p-6">
           <div className="flex items-start gap-3">
@@ -242,21 +246,15 @@ export default function BudgetingPage() {
                 <div className="space-y-3">
                   {totalVariance.status === 'OVER' && Math.abs(parseFloat(totalVariance.variancePct)) > 20 ? (
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      ⚠️ <span className="font-bold">Aggressive Overspend:</span> Operating expenses are exceeding budget by <span className="text-rose-600 font-bold">{totalVariance.variancePct}%</span>. Immediate review of discretionary spending is recommended to maintain runway integrity.
+                      ⚠️ <span className="font-bold">Aggressive Overspend:</span> Operating expenses are exceeding budget by <span className="text-rose-600 font-bold">{totalVariance.variancePct}%</span>.
                     </p>
                   ) : totalVariance.status === 'UNDER' ? (
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      ✅ <span className="font-bold">Efficiency Alert:</span> Your spending is <span className="text-emerald-600 font-bold">{Math.abs(parseFloat(totalVariance.variancePct))}%</span> below budget. Consider if this is due to operational delays or true cost savings that could be reallocated to growth.
+                      ✅ <span className="font-bold">Efficiency Alert:</span> Your spending is <span className="text-emerald-600 font-bold">{Math.abs(parseFloat(totalVariance.variancePct))}%</span> below budget.
                     </p>
                   ) : (
                     <p className="text-sm text-slate-600 leading-relaxed">
-                      Business consumption is trending exactly as planned. Maintain current discipline to hit quarterly burn targets.
-                    </p>
-                  )}
-                  
-                  {budgetItems.find(i => i.name.toLowerCase().includes('marketing') && i.status === 'OVER' && parseFloat(i.variancePct) > 30) && (
-                    <p className="text-sm text-slate-600 leading-relaxed">
-                      📢 <span className="font-bold">Marketing Cost Spike:</span> Ad spend is 30%+ over budget. Ensure your Customer Acquisition Cost (CAC) efficiency hasn't degraded during this period.
+                      Business consumption is trending exactly as planned.
                     </p>
                   )}
                 </div>
@@ -270,7 +268,7 @@ export default function BudgetingPage() {
             <div className="space-y-1">
               <h4 className="text-sm font-bold text-slate-900 uppercase tracking-tight">Guardian Note</h4>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Budgeting is a living process. Use the "Set Targets" tool at the start of every month to define your operational ceiling. UdyamRakshak will handle the real-time reconciliation as you log expenses.
+                Budgeting is a living process. UdyamRakshak handles real-time reconciliation as you log expenses.
               </p>
             </div>
           </div>

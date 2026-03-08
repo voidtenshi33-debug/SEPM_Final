@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -6,29 +7,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Wallet } from 'lucide-react';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirestore, useDoc, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-/**
- * AddFinancialsModal - The Monthly Master Log for StartupOS.
- * Adapts its UI based on the businessType (Product, Service, Hybrid) 
- * defined in the StartupProfile.
- */
 export function AddFinancialsModal() {
   const [open, setOpen] = React.useState(false);
   const db = useFirestore();
+  const { user } = useUser();
   
-  // Reference the startup profile to determine which metrics to show
-  const profileRef = useMemoFirebase(() => doc(db, 'startupProfile', 'main'), [db]);
+  const profileRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(db, 'users', user.uid, 'startupProfile', 'main');
+  }, [db, user]);
   const { data: profile } = useDoc(profileRef);
 
   const businessType = profile?.businessType || "Hybrid";
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (!user) return;
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const monthId = formData.get('month') as string; // Expected format: YYYY-MM
+    const monthId = formData.get('month') as string;
     
     const netRevenue = Number(formData.get('revenue'));
     const opEx = Number(formData.get('opex'));
@@ -52,8 +52,7 @@ export function AddFinancialsModal() {
       dateRecorded: new Date().toISOString(),
     };
 
-    const finRef = doc(db, 'financials', monthId);
-    // Use non-blocking update for optimistic UI
+    const finRef = doc(db, 'users', user.uid, 'financials', monthId);
     setDocumentNonBlocking(finRef, financialData, { merge: true });
     setOpen(false);
   };
@@ -134,16 +133,6 @@ export function AddFinancialsModal() {
                   <div className="grid gap-2">
                     <Label htmlFor="hours">Billable Hours</Label>
                     <Input id="hours" name="hours" type="number" placeholder="0" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="totalClients">Total Clients</Label>
-                    <Input id="totalClients" name="totalClients" type="number" placeholder="0" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="retainedClients">Retained Clients</Label>
-                    <Input id="retainedClients" name="retainedClients" type="number" placeholder="0" />
                   </div>
                 </div>
               </div>

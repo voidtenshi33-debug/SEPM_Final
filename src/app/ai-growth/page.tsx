@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from "react";
@@ -18,7 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { generateStrategicVerdict, getPriorityActions } from "@/modules/ai/utils/growthEngine";
 import { calculateProjectHealth } from "@/modules/execution/utils/executionEngine";
@@ -37,15 +38,24 @@ import {
 export default function AIGrowthPage() {
   const { profile, latestMonth, financials, expenses, categories, isLoading } = useFinancials();
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   const [converting, setConverting] = useState<string | null>(null);
 
-  const projectsQuery = useMemoFirebase(() => collection(db, 'projects'), [db]);
-  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
+  const projectsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'projects');
+  }, [db, user]);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'tasks');
+  }, [db, user]);
+
   const { data: projects } = useCollection(projectsQuery);
   const { data: tasks } = useCollection(tasksQuery);
 
-  if (isLoading) {
+  if (isLoading || !user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -56,9 +66,8 @@ export default function AIGrowthPage() {
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const margin = latestMonth ? calcEBITDAMargin(ebitda, latestMonth.netRevenue) : 0;
   
-  // Real Runway Calc (Using mock ₹10L baseline cash if not found in profile)
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const runway = calculateRunway(1000000, currentBurn);
+  const runway = calculateRunway(0, currentBurn); // Real runway starts at 0 unless cash is logged
   
   const avgProgress = projects && projects.length > 0
     ? projects.reduce((acc, p) => {
@@ -67,7 +76,7 @@ export default function AIGrowthPage() {
       }, 0) / projects.length
     : 0;
 
-  const marketStats = { industryGrowthRate: 18 }; // Placeholder for real industry data source
+  const marketStats = { industryGrowthRate: 18 };
   const context = {
     runway,
     revenueTrend: financials.length > 1 && financials[0].netRevenue > financials[1].netRevenue ? 'Up' : 'Stable',
@@ -77,7 +86,6 @@ export default function AIGrowthPage() {
   const verdict = generateStrategicVerdict(context, { avgProgress }, marketStats);
   const actions = getPriorityActions(verdict, profile?.businessType || 'Hybrid');
 
-  // Radar Data Derived from REAL metrics
   const radarData = [
     { subject: 'Finance', value: Math.min(100, (runway / 12) * 100), fullMark: 100 },
     { subject: 'Execution', value: Math.min(100, avgProgress), fullMark: 100 },
@@ -87,9 +95,10 @@ export default function AIGrowthPage() {
   ];
 
   const handleConvertToInitiative = async (action: any) => {
+    if (!user) return;
     setConverting(action.title);
     try {
-      const projectRef = await addDoc(collection(db, "projects"), {
+      const projectRef = await addDoc(collection(db, "users", user.uid, "projects"), {
         name: action.title,
         description: action.why,
         type: action.type,
@@ -100,7 +109,7 @@ export default function AIGrowthPage() {
         createdAt: serverTimestamp(),
       });
 
-      await addDoc(collection(db, "tasks"), {
+      await addDoc(collection(db, "users", user.uid, "tasks"), {
         projectId: projectRef.id,
         title: `Initiative Kickoff: ${action.title}`,
         status: "Todo",

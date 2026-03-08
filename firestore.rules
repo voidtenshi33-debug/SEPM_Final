@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * UdyamRakshak Security Rules
+     * UdyamRakshak Multi-Tenant Security Rules
      */
 
     // --- Helper Functions ---
@@ -12,91 +12,18 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isExistingUserAuthorized() {
-      return isSignedIn() && resource != null;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Financial Module Rules ---
-
-    match /financials/{monthId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /startupProfile/main {
-      allow get: if isSignedIn();
-      allow write: if isSignedIn();
-    }
-
-    match /expenseCategories/{categoryId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /expenses/{expenseId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /rounds/{roundId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /investors/{investorId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.roundId != null;
-      allow update: if isExistingUserAuthorized() && request.resource.data.roundId == resource.data.roundId;
-      allow delete: if isExistingUserAuthorized();
-    }
-
-    match /leadership/{memberId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /capitalStructure/main {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /budgets/{monthId} {
-      allow get, list: if isSignedIn();
-      allow write: if isSignedIn();
-    }
-
-    // --- Execution Module Rules ---
-
-    match /projects/{projectId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
-    }
-
-    match /tasks/{taskId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
+    // --- Tenant Isolation Rule ---
+    // All strategic data is nested under /users/{userId}
+    match /users/{userId} {
       
-      match /weeklyUpdates/{updateId} {
-        allow get, list: if isSignedIn();
-        allow create: if isSignedIn();
-        allow update, delete: if isExistingUserAuthorized();
+      // Full access to everything under the user's specific path
+      match /{allPaths=**} {
+        allow read, write: if isOwner(userId);
       }
-    }
-
-    // --- Documents Rules ---
-
-    match /documents/{docId} {
-      allow get, list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update, delete: if isExistingUserAuthorized();
     }
   }
 }

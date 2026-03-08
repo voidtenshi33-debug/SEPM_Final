@@ -219,21 +219,21 @@
     }
   },
   "auth": {
-    "providers": ["password", "anonymous"]
+    "providers": ["password"]
   },
   "firestore": {
-    "financials/{monthId}": { "schema": "Financial", "description": "Monthly financial snapshots." },
-    "startupProfile/main": { "schema": "StartupProfile", "description": "Core startup information." },
-    "expenseCategories/{categoryId}": { "schema": "ExpenseCategory", "description": "Business expense categories." },
-    "expenses/{expenseId}": { "schema": "Expense", "description": "Individual expense tracking entries." },
-    "leadership/{memberId}": { "schema": "Leadership", "description": "Core team equity tracking." },
-    "rounds/{roundId}": { "schema": "Round", "description": "Funding round history." },
-    "investors/{investorId}": { "schema": "Investor", "description": "Investor cap table entries." },
-    "capitalStructure/main": { "schema": "CapitalStructure", "description": "Global cap table settings." },
-    "budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." },
-    "projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
-    "tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
-    "tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." },
-    "documents/{docId}": { "schema": "Document", "description": "Strategic document vault." }
+    "users/{userId}/financials/{monthId}": { "schema": "Financial", "description": "Monthly financial snapshots." },
+    "users/{userId}/startupProfile/main": { "schema": "StartupProfile", "description": "Core startup information." },
+    "users/{userId}/expenseCategories/{categoryId}": { "schema": "ExpenseCategory", "description": "Business expense categories." },
+    "users/{userId}/expenses/{expenseId}": { "schema": "Expense", "description": "Individual expense tracking entries." },
+    "users/{userId}/leadership/{memberId}": { "schema": "Leadership", "description": "Core team equity tracking." },
+    "users/{userId}/rounds/{roundId}": { "schema": "Round", "description": "Funding round history." },
+    "users/{userId}/investors/{investorId}": { "schema": "Investor", "description": "Investor cap table entries." },
+    "users/{userId}/capitalStructure/main": { "schema": "CapitalStructure", "description": "Global cap table settings." },
+    "users/{userId}/budgets/{monthId}": { "schema": "Budget", "description": "Monthly budget allocations." },
+    "users/{userId}/projects/{projectId}": { "schema": "Project", "description": "Strategic projects." },
+    "users/{userId}/tasks/{taskId}": { "schema": "Task", "description": "Operational tasks." },
+    "users/{userId}/tasks/{taskId}/weeklyUpdates/{updateId}": { "schema": "WeeklyUpdate", "description": "Weekly progress pulse log for specific tasks." },
+    "users/{userId}/documents/{docId}": { "schema": "Document", "description": "Strategic document vault." }
   }
 }

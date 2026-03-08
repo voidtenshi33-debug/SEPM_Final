@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from "react";
@@ -7,12 +8,7 @@ import { Button } from "@/components/ui/button";
 import { 
   Mail, 
   Shield, 
-  Award, 
   Copy, 
-  TrendingUp, 
-  Clock, 
-  AlertCircle, 
-  UserCheck, 
   Activity, 
   Trophy, 
   Loader2, 
@@ -20,10 +16,11 @@ import {
   ShieldAlert,
   Zap,
   ListTodo,
-  ExternalLink
+  ExternalLink,
+  Clock
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, useCollection, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
 import { calculateVestingProgress } from "@/modules/financial/utils/financialEngine";
 import { calculateMemberPerformance } from "@/modules/execution/utils/executionEngine";
@@ -44,23 +41,28 @@ const COLORS = ["bg-slate-900", "bg-blue-600", "bg-indigo-600", "bg-emerald-600"
 
 export default function TeamManagementPage() {
   const db = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
   
-  const leadershipQuery = useMemoFirebase(() => query(collection(db, 'leadership'), orderBy('name', 'asc')), [db]);
-  const tasksQuery = useMemoFirebase(() => collection(db, 'tasks'), [db]);
+  const leadershipQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'leadership'), orderBy('name', 'asc'));
+  }, [db, user]);
+
+  const tasksQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'tasks');
+  }, [db, user]);
 
   const { data: leadership, isLoading: loadingLead } = useCollection(leadershipQuery);
   const { data: tasks } = useCollection(tasksQuery);
 
-  const [selectedMember, setSelectedMember] = useState<any>(null);
-
-  if (loadingLead) return (
+  if (loadingLead || !user) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
     </div>
   );
 
-  // Team Summary Logic
   const memberPerformances = leadership?.map(m => {
     const memberTasks = tasks?.filter(t => t.assignedTo === m.name) || [];
     return { ...m, performance: calculateMemberPerformance(memberTasks) };
@@ -70,7 +72,9 @@ export default function TeamManagementPage() {
     ? Math.round(memberPerformances.reduce((acc, curr) => acc + curr.performance.score, 0) / memberPerformances.length)
     : 0;
 
-  const topPerformer = [...memberPerformances].sort((a, b) => b.performance.score - a.performance.score)[0];
+  const topPerformer = memberPerformances.length > 0 
+    ? [...memberPerformances].sort((a, b) => b.performance.score - a.performance.score)[0]
+    : null;
   const totalActiveTasks = tasks?.filter(t => t.status !== 'Completed').length || 0;
   const totalOverdueTasks = tasks?.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length || 0;
 
@@ -88,7 +92,6 @@ export default function TeamManagementPage() {
         actions={<AddLeadershipModal />}
       />
 
-      {/* TEAM OVERVIEW PANEL */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-none shadow-sm bg-[#0F172A] text-white">
           <CardContent className="p-6">
@@ -116,7 +119,7 @@ export default function TeamManagementPage() {
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue Risk</p>
             <p className={`text-3xl font-bold ${totalOverdueTasks > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{totalOverdueTasks}</p>
             <div className="flex items-center gap-1 text-[10px] text-rose-500 mt-2 font-bold uppercase">
-              <ShieldAlert className="h-3 w-3" /> Critical bottlenecks
+              <ShieldAlert className="h-3 w-3" /> Bottlenecks
             </div>
           </CardContent>
         </Card>
@@ -128,12 +131,11 @@ export default function TeamManagementPage() {
               <Trophy className="h-4 w-4 text-emerald-600" />
             </div>
             <p className="text-lg font-bold text-emerald-900 truncate">{topPerformer?.name || 'Calculating...'}</p>
-            <p className="text-[10px] text-emerald-600 mt-1 font-bold">{topPerformer?.performance.score}% MERIT SCORE</p>
+            <p className="text-[10px] text-emerald-600 mt-1 font-bold">{topPerformer?.performance.score || 0}% MERIT SCORE</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* MEMBER CARDS GRID */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {memberPerformances.map((member, idx) => {
           const isTop = member.name === topPerformer?.name && member.performance.score > 85;
@@ -225,7 +227,6 @@ export default function TeamManagementPage() {
                 </SheetHeader>
 
                 <div className="py-8 space-y-8">
-                  {/* Performance Breakdown */}
                   <section className="space-y-4">
                     <h4 className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
                       <Activity className="h-4 w-4" /> Performance Breakdown
@@ -244,37 +245,6 @@ export default function TeamManagementPage() {
                     </div>
                   </section>
 
-                  {/* Issue Resolution Panel */}
-                  {member.performance.risk !== 'NORMAL' && (
-                    <section className="p-6 rounded-2xl bg-rose-50 border border-rose-100 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 rounded-xl bg-rose-100 text-rose-600">
-                          <ShieldAlert className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-rose-900">ISSUE: {member.performance.risk.replace('_', ' ')}</h4>
-                          <p className="text-xs text-rose-700">Detected bottleneck in execution flow.</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-rose-400 uppercase">Suggested Resolutions</p>
-                        <ul className="space-y-2">
-                          <li className="flex items-center gap-2 text-xs text-rose-800 bg-white/50 p-2 rounded-lg border border-rose-100">
-                            <Zap className="h-3.5 w-3.5" /> Reassign {member.performance.overdue} overdue tasks
-                          </li>
-                          <li className="flex items-center gap-2 text-xs text-rose-800 bg-white/50 p-2 rounded-lg border border-rose-100">
-                            <Zap className="h-3.5 w-3.5" /> Schedule 15m tactical sync
-                          </li>
-                        </ul>
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        <Button className="flex-1 bg-rose-600 hover:bg-rose-700 text-white text-xs h-9">Reassign Tasks</Button>
-                        <Button variant="outline" className="flex-1 text-xs h-9 border-rose-200 text-rose-700">Log Action</Button>
-                      </div>
-                    </section>
-                  )}
-
-                  {/* Task Audit */}
                   <section className="space-y-4">
                     <h4 className="text-sm font-bold uppercase text-slate-400 flex items-center gap-2">
                       <ListTodo className="h-4 w-4" /> Tactical Audit
@@ -299,7 +269,6 @@ export default function TeamManagementPage() {
                     </div>
                   </section>
 
-                  {/* Administration */}
                   <section className="pt-6 border-t space-y-4">
                     <div className="flex gap-3">
                       {member.inviteStatus === "Pending" ? (
@@ -328,17 +297,10 @@ export default function TeamManagementPage() {
           <Shield className="h-40 w-40" />
         </div>
         <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-3">
-            <Award className="h-8 w-8 text-amber-400" />
-            <h3 className="text-2xl font-bold font-headline">Meritocracy Protocol</h3>
-          </div>
+          <h3 className="text-2xl font-bold font-headline">Meritocracy Protocol</h3>
           <p className="text-slate-400 text-base leading-relaxed max-w-3xl">
-            StartupOS automatically enforces a performance-based equity culture. Scores are derived from on-time milestones and consistent weekly updates. Members with scores &gt; 90% are prioritized for bonus recognition and future grant approvals.
+            StartupOS automatically enforces a performance-based equity culture.
           </p>
-          <div className="flex gap-4 pt-4">
-            <Badge className="bg-blue-500/20 text-blue-400 border-none px-4 py-1">Accountability: Active</Badge>
-            <Badge className="bg-emerald-500/20 text-emerald-400 border-none px-4 py-1">Audit Log: Secured</Badge>
-          </div>
         </div>
       </div>
     </div>
