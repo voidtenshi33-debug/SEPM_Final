@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from "react";
@@ -43,11 +44,11 @@ export function AddRoundModal() {
         roundType,
         preMoneyValuation,
         targetRaise,
+        amountRaised: 0, // Securing consistency with Ledger increment
         equityOfferedPct,
         startDate: new Date(startDate).toISOString(),
         closeDate: null,
         status: "Open",
-        totalRaised: 0,
         totalInvestors: 0,
         createdAt: serverTimestamp(),
       });
