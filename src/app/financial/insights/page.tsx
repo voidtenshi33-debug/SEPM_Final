@@ -234,7 +234,7 @@ export default function FinancialInsightsPage() {
                       "text-[9px] font-bold uppercase h-5",
                       risk.level === 'CRITICAL' ? "border-rose-200 text-rose-700 bg-rose-50" : ""
                     )}>
-                      {risk.action}
+                      {risk.action || 'Strategic Review'}
                     </Badge>
                   </div>
                 </CardContent>
@@ -345,7 +345,7 @@ export default function FinancialInsightsPage() {
 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-bold uppercase">
-                  <span className="text-slate-500">Budget Variance (Target: < 5%)</span>
+                  <span className="text-slate-500">Budget Variance (Target: &lt; 5%)</span>
                   <span className={totalVariancePct > 10 ? "text-rose-500" : "text-emerald-500"}>
                     {totalVariancePct.toFixed(1)}%
                   </span>
