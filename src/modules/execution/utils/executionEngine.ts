@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * @fileOverview Strategic Execution Brain for StartupOS.
+ * @fileOverview Strategic Execution Brain for UdyamRakshak.
  * Reconciles work progress, budget usage, and performance accountability.
  */
 
@@ -61,16 +61,21 @@ export function calculateMemberPerformance(tasks: any[]): number {
     return new Date(t.completedAt) <= new Date(t.deadline);
   });
 
+  const overdue = tasks.filter(t => t.status !== 'Completed' && new Date(t.deadline) < new Date()).length;
+
   const completionRate = (completed.length / tasks.length) * 100;
   const onTimeRate = completed.length > 0 ? (onTime.length / completed.length) * 100 : 100;
+  
+  // Deduct for overdue tasks
+  const penalty = overdue * 5;
 
-  return Math.round((completionRate * 0.4) + (onTimeRate * 0.6));
+  return Math.max(0, Math.round((completionRate * 0.4) + (onTimeRate * 0.6) - penalty));
 }
 
 /**
  * Generates AI-driven strategic initiatives based on financial and model signals.
  */
-export function getStrategicSuggestions(data: {
+export function getStrategicRecommendations(data: {
   businessType: string;
   revenueTrend: 'up' | 'down' | 'flat';
   runway: number;
@@ -78,10 +83,10 @@ export function getStrategicSuggestions(data: {
 }) {
   const suggestions = [];
 
-  if (data.businessType === 'Product' && data.revenueTrend === 'flat') {
+  if (data.businessType === 'Product' && (data.revenueTrend === 'flat' || data.revenueTrend === 'down')) {
     suggestions.push({
       title: "Subscription Tier Launch",
-      reason: "Revenue has flattened. Recurring billing stabilizes cash flow.",
+      reason: "Revenue has flattened. Recurring billing stabilizes cash flow and increases LTV.",
       impact: "High",
       risk: "Medium",
       type: "Product"
@@ -91,7 +96,7 @@ export function getStrategicSuggestions(data: {
   if (data.businessType === 'Service' && (data.utilization || 0) < 60) {
     suggestions.push({
       title: "Outbound Sales Blitz",
-      reason: "Team utilization is below 60%. Excess capacity detected.",
+      reason: "Team utilization is below 60%. Excess capacity detected. Immediate sales focus required.",
       impact: "High",
       risk: "Low",
       type: "Growth"
@@ -101,10 +106,20 @@ export function getStrategicSuggestions(data: {
   if (data.runway < 6) {
     suggestions.push({
       title: "Series A Data Room Prep",
-      reason: "Runway is under 6 months. Milestone readiness is critical for survival.",
+      reason: "Runway is under 6 months. Milestone readiness is critical for survival and investor confidence.",
       impact: "Critical",
       risk: "High",
       type: "Fundraising"
+    });
+  }
+
+  if (data.businessType === 'Hybrid' && data.revenueTrend === 'up') {
+    suggestions.push({
+      title: "Scale Core Infrastructure",
+      reason: "High growth detected. Infrastructure must scale to prevent service degradation.",
+      impact: "Medium",
+      risk: "Low",
+      type: "Infrastructure"
     });
   }
 

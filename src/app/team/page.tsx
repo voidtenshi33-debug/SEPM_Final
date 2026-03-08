@@ -2,9 +2,9 @@
 
 import React from "react";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { UserPlus, Mail, Shield, Award, Copy, CheckCircle2, TrendingUp, Clock, AlertCircle } from "lucide-react";
+import { Mail, Shield, Award, Copy, TrendingUp, Clock, AlertCircle, UserCheck } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy } from "firebase/firestore";
@@ -39,14 +39,14 @@ export default function TeamPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       <PageHeader 
-        title="Performance & Governance" 
-        description="Unified oversight of team accountability, equity vesting, and execution throughput."
+        title="Performance & Accountability" 
+        description="Unified oversight of team reliability, equity vesting, and execution throughput."
         actions={<AddLeadershipModal />}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {leadership?.map((member, idx) => {
-          const progress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
+          const vestProgress = calculateVestingProgress(member.vestingStartDate, member.vestingYears);
           const isPending = member.inviteStatus === "Pending";
           
           const memberTasks = tasks?.filter(t => t.assignedTo === member.name) || [];
@@ -77,8 +77,8 @@ export default function TeamPage() {
               <CardContent className="p-6 space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Tasks</p>
-                    <p className="text-xl font-bold text-slate-900">{activeTasks}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Active Load</p>
+                    <p className="text-xl font-bold text-slate-900">{activeTasks} Tasks</p>
                   </div>
                   <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue</p>
@@ -89,9 +89,9 @@ export default function TeamPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[10px] font-bold uppercase text-slate-400">
                     <span>Equity Vested</span>
-                    <span>{progress}%</span>
+                    <span>{vestProgress}%</span>
                   </div>
-                  <Progress value={parseFloat(progress)} className="h-1.5" />
+                  <Progress value={parseFloat(vestProgress)} className="h-1.5" />
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -115,7 +115,7 @@ export default function TeamPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-slate-100">
         <Card className="border-none shadow-xl bg-[#0F172A] text-white p-8">
           <div className="flex items-start gap-6">
              <div className="p-3 rounded-2xl bg-blue-500/20">
@@ -124,7 +124,7 @@ export default function TeamPage() {
              <div>
                 <h3 className="text-xl font-bold mb-2 font-headline">Accountability Layer</h3>
                 <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                  Performance scores are dynamically calculated using on-time task completion and milestone throughput. This data is confidential and visible only to the founding leadership.
+                  Performance scores are dynamically calculated using on-time task completion, weekly pulse consistency, and milestone throughput. This data is confidential and used for bonus approvals.
                 </p>
                 <div className="flex gap-8">
                   <div>
@@ -146,9 +146,9 @@ export default function TeamPage() {
                 <Award className="h-8 w-8 text-emerald-600" />
              </div>
              <div>
-                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity</h3>
+                <h3 className="text-xl font-bold mb-2 text-slate-900 font-headline">Bonus & Equity Enforcement</h3>
                 <p className="text-slate-600 text-sm leading-relaxed mb-6">
-                  Members with performance scores &gt; 90% are automatically flagged for **Bonus Eligibility** in the tactical task board. Use the access audit log to track individual contributions.
+                  Members with performance scores &gt; 90% are automatically flagged for <strong>Bonus Eligibility</strong> in the tactical task board. Use the access audit log to track individual contributions.
                 </p>
                 <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-100 text-[10px] font-bold uppercase tracking-widest h-9">
                    <Clock className="h-4 w-4 mr-2" /> Performance Audit

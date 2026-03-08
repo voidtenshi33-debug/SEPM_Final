@@ -7,16 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { BrainCircuit, Loader2, Target, CheckCircle2, AlertTriangle, Sparkles, Activity, Rocket, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useFinancials } from "@/modules/financial/hooks/useFinancials";
-import { getStrategicSuggestions } from "@/modules/execution/utils/executionEngine";
+import { getStrategicRecommendations } from "@/modules/execution/utils/executionEngine";
 import { useFirestore } from "@/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { Badge } from "@/components/ui/badge";
 
 export default function AIInsightsPage() {
   const [loading, setLoading] = React.useState(false);
   const [insights, setInsights] = React.useState<GenerateStrategicInsightsOutput | null>(null);
   const { toast } = useToast();
   const db = useFirestore();
-  const { profile, latestMonth, prevMonth, financials } = useFinancials();
+  const { profile, latestMonth, prevMonth } = useFinancials();
 
   // Rule-based strategic suggestions based on live data
   const suggestions = React.useMemo(() => {
@@ -25,7 +26,7 @@ export default function AIInsightsPage() {
     const revenueTrend = (latestMonth.netRevenue > (prevMonth?.netRevenue || 0)) ? 'up' : 'flat';
     const runway = 42000000 / (latestMonth.operatingExpenses - latestMonth.netRevenue || 1);
 
-    return getStrategicSuggestions({
+    return getStrategicRecommendations({
       businessType: profile.businessType || 'Hybrid',
       revenueTrend: revenueTrend as any,
       runway: runway
@@ -78,18 +79,21 @@ export default function AIInsightsPage() {
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline flex items-center gap-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-[#0F172A] p-8 rounded-[2rem] text-white overflow-hidden relative group">
+        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+          <BrainCircuit className="h-40 w-40" />
+        </div>
+        <div className="relative z-10">
+          <h1 className="text-3xl font-bold font-headline flex items-center gap-3">
             <BrainCircuit className="h-8 w-8 text-accent" />
             Growth Intelligence Engine
           </h1>
-          <p className="text-muted-foreground">AI-driven strategic decision support based on operational data.</p>
+          <p className="text-slate-400 mt-1">AI-driven strategic decision support based on your startup DNA.</p>
         </div>
         <Button 
           onClick={handleGenerate} 
           disabled={loading}
-          className="bg-accent hover:bg-accent/90 shadow-lg px-8 h-12 font-bold"
+          className="bg-accent hover:bg-accent/90 shadow-xl px-8 h-12 font-bold relative z-10"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : <Sparkles className="h-5 w-5 mr-2" />}
           Generate Full Strategic Analysis
@@ -98,16 +102,17 @@ export default function AIInsightsPage() {
 
       {/* Suggested Strategic Initiatives (Rule-Based) */}
       <section className="space-y-4">
-        <h2 className="text-lg font-bold flex items-center gap-2 px-1">
+        <h2 className="text-lg font-bold flex items-center gap-2 px-1 text-slate-900">
           <Rocket className="h-5 w-5 text-indigo-600" />
           Recommended Strategic Initiatives
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {suggestions.map((s, i) => (
-            <Card key={i} className="border-none shadow-xl bg-white group hover:-translate-y-1 transition-all">
+            <Card key={i} className="border-none shadow-xl bg-white group hover:-translate-y-1 transition-all overflow-hidden">
+              <div className="h-1 bg-indigo-600 w-full" />
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between mb-2">
-                  <Badge variant="outline" className="text-[8px] font-bold uppercase">{s.type}</Badge>
+                  <Badge variant="outline" className="text-[8px] font-bold uppercase tracking-widest">{s.type}</Badge>
                   <Badge className={s.impact === 'Critical' ? "bg-rose-500" : "bg-blue-500"}>{s.impact} Impact</Badge>
                 </div>
                 <CardTitle className="text-lg font-bold text-slate-900">{s.title}</CardTitle>
@@ -123,6 +128,12 @@ export default function AIInsightsPage() {
               </CardContent>
             </Card>
           ))}
+          {suggestions.length === 0 && (
+            <Card className="col-span-full border-2 border-dashed border-slate-200 p-12 flex flex-col items-center text-center space-y-3 bg-slate-50/50">
+              <Activity className="h-10 w-10 text-slate-300" />
+              <p className="text-sm text-slate-500 italic">Financial data within safe parameters. No emergency initiatives required.</p>
+            </Card>
+          )}
         </div>
       </section>
 
