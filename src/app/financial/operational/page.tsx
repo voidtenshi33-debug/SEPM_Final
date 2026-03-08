@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from "react";
@@ -34,6 +33,7 @@ import {
   AlertCircle,
   PieChart as PieIcon,
   LayoutList,
+  CheckCircle2,
   Loader2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -94,6 +94,8 @@ export default function OperationalPage() {
     revenue: f.netRevenue,
     expenses: f.operatingExpenses,
   })).reverse() || [];
+
+  const isOperatingPositive = netRev >= opEx;
 
   if (loadingFin || !mounted) {
     return (
@@ -156,13 +158,29 @@ export default function OperationalPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Primary Trend Chart */}
         <Card className="lg:col-span-2 border-none shadow-xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
-              <Activity className="h-5 w-5 text-[#3B82F6]" />
-              Burn vs. Revenue Intelligence
-            </CardTitle>
-            <CardDescription>Historical performance trend in INR (₹)</CardDescription>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg font-bold flex items-center">
+                <Activity className="h-5 w-5 mr-2 text-[#3B82F6]" />
+                Burn vs. Revenue Intelligence
+              </CardTitle>
+              <CardDescription>Historical performance trend in INR (₹)</CardDescription>
+            </div>
+            <div className="flex items-center">
+              {isOperatingPositive ? (
+                <Badge className="bg-emerald-50 text-emerald-700 border-emerald-100 flex items-center gap-1.5 px-3 py-1 font-bold text-[10px] uppercase">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Unit Positive
+                </Badge>
+              ) : (
+                <Badge className="bg-rose-50 text-rose-700 border-rose-100 flex items-center gap-1.5 px-3 py-1 font-bold text-[10px] uppercase">
+                  <TrendingDown className="h-3.5 w-3.5" />
+                  Net Burn
+                </Badge>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="h-[400px] p-6 pt-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -181,45 +199,44 @@ export default function OperationalPage() {
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card className="border-none shadow-xl bg-accent/5 border border-accent/10">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2 text-accent">
-                <AlertCircle className="h-5 w-5" />
-                Operational Guard
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-               <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Efficiency Analysis</h4>
-                  {margin < 15 ? (
-                    <p className="text-sm text-slate-600 leading-relaxed italic">"EBITDA Margin is below 15%. Optimization in overhead costs is recommended to stabilize unit economics."</p>
-                  ) : (
-                    <p className="text-sm text-slate-600 leading-relaxed italic">"Business model becoming sustainable. EBITDA margin is healthy and trending towards scale."</p>
-                  )}
-               </div>
-               
-               <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
-                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Fixed Cost Rigidity</h4>
-                  <div className="space-y-2">
-                     <div className="flex justify-between text-sm">
-                        <span className="text-slate-500 font-medium">Structural Rigidity</span>
-                        <span className="font-bold text-slate-900">{fixedVsVariable.fixed.toFixed(1)}%</span>
-                     </div>
-                     <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${fixedVsVariable.fixed}%` }} />
-                     </div>
-                     <p className="text-[10px] text-slate-400">High rigidity reduces pivot elasticity in a crisis.</p>
-                  </div>
-               </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* AI Intelligence Block */}
+        <Card className="border-none shadow-xl bg-accent/5 border border-accent/10 flex flex-col">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold flex items-center gap-2 text-accent">
+              <AlertCircle className="h-5 w-5" />
+              Operational Guard
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 space-y-4">
+             <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Efficiency Analysis</h4>
+                {margin < 15 ? (
+                  <p className="text-sm text-slate-600 leading-relaxed italic">"EBITDA Margin is below 15%. Efficiency optimization in overhead costs is recommended to stabilize unit economics."</p>
+                ) : (
+                  <p className="text-sm text-slate-600 leading-relaxed italic">"Business model becoming sustainable. EBITDA margin is healthy and trending towards scale."</p>
+                )}
+             </div>
+             
+             <div className="p-4 rounded-2xl bg-white/80 border border-accent/10 shadow-sm">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Fixed Cost Rigidity</h4>
+                <div className="space-y-2">
+                   <div className="flex justify-between text-sm">
+                      <span className="text-slate-500 font-medium">Structural Rigidity</span>
+                      <span className="font-bold text-slate-900">{fixedVsVariable.fixed.toFixed(1)}%</span>
+                   </div>
+                   <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-blue-600 transition-all duration-1000" style={{ width: `${fixedVsVariable.fixed}%` }} />
+                   </div>
+                   <p className="text-[10px] text-slate-400 italic">High rigidity reduces pivot elasticity in a crisis.</p>
+                </div>
+             </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Expense Distribution Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <Card className="border-none shadow-xl">
+        <Card className="border-none shadow-xl bg-white">
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <PieIcon className="h-5 w-5 text-accent" />
@@ -228,7 +245,7 @@ export default function OperationalPage() {
             <CardDescription>Current period distribution by classification</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px]">
-            {distributionData.length > 0 ? (
+            {mounted && distributionData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -260,7 +277,7 @@ export default function OperationalPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-xl">
+        <Card className="border-none shadow-xl bg-white">
           <CardHeader>
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <LayoutList className="h-5 w-5 text-accent" />
