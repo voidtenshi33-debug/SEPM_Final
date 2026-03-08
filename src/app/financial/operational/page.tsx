@@ -102,7 +102,7 @@ export default function OperationalPage() {
         <AddExpenseModal categories={categories || []} />
       </div>
 
-      {/* KPI Section */}
+      {/* Metric Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-none shadow-xl bg-primary text-primary-foreground">
           <CardContent className="p-6">
@@ -185,7 +185,7 @@ export default function OperationalPage() {
           </CardContent>
         </Card>
 
-        {/* Expense Distribution Intelligence */}
+        {/* Distribution Block */}
         <Card className="border-none shadow-xl overflow-hidden flex flex-col">
           <CardHeader className="bg-slate-50/50 border-b">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
@@ -290,9 +290,9 @@ export default function OperationalPage() {
                   <ReceiptText className="h-8 w-8 text-slate-300" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900">No Expenses Recorded</h4>
+                  <h4 className="font-bold text-slate-900">No Data Recorded for {currentMonthRecord?.month || 'March 2026'}</h4>
                   <p className="text-xs text-muted-foreground max-w-xs mx-auto mt-1">
-                    Begin logging operational costs for {currentMonthRecord?.month || 'this month'} to unlock distribution intelligence.
+                    Begin logging operational costs to unlock distribution intelligence.
                   </p>
                 </div>
                 <AddExpenseModal categories={categories || []} />
@@ -302,7 +302,7 @@ export default function OperationalPage() {
         </Card>
       </div>
 
-      {/* Strategic Intelligence Footer */}
+      {/* Cost Rigidity Footer */}
       <Card className="border-none shadow-lg bg-accent/5 border border-accent/10">
         <CardContent className="p-6 flex items-start gap-4">
            <div className="h-10 w-10 rounded-full bg-accent/10 flex items-center justify-center shrink-0">

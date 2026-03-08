@@ -89,6 +89,10 @@ export const getMonthlyDistribution = (monthlyExpenses: any[], globalCategories:
     const catId = exp.categoryId;
     const cat = catMap[catId] || { name: "Uncategorized", type: "Variable", color: "#94A3B8" };
     if (!acc[catId]) {
+      acc[acc.length] = catId; // Temporary key tracking for group logic if needed, but let's use a standard object
+    }
+    
+    if (!acc[catId]) {
       acc[catId] = { 
         name: cat.name, 
         type: cat.type, 
@@ -99,12 +103,12 @@ export const getMonthlyDistribution = (monthlyExpenses: any[], globalCategories:
     }
     acc[catId].amount += exp.amount;
     return acc;
-  }, {});
+  }, {} as any);
 
   return Object.values(grouped).map((item: any) => ({
     ...item,
     percentage: total > 0 ? Number(((item.amount / total) * 100).toFixed(1)) : 0
-  })).sort((a, b) => b.amount - a.amount);
+  })).sort((a: any, b: any) => b.amount - a.amount);
 };
 
 /**
@@ -128,7 +132,7 @@ export const calculateHealthScore = (data: HealthMetrics): number => {
   let score = 100;
   // Deductions based on "Rakshak" (Protector) logic
   if (data.runway < 6) score -= 30;
-  if (data.ebitdaMargin < 10) score -= 20;
+  if (data.ebitdaMargin < 15) score -= 20; // Updated to 15% as per user request
   if (data.burnRate > data.netRevenue) score -= 15;
   if (data.founderEquity < 51) score -= 10;
   return Math.max(score, 0);
@@ -151,7 +155,7 @@ export const generateInsights = (data: HealthMetrics): StrategicInsight[] => {
   if (data.runway < 6) {
     reports.push({ 
       level: 'CRITICAL', 
-      msg: "Runway < 6 months. Urgent: Cut non-essential OpEx by 20% or initiate bridge funding.", 
+      msg: "Runway critical (< 6 months). Immediate cost optimization required.", 
       type: 'survival',
       icon: 'ShieldAlert'
     });
@@ -178,7 +182,7 @@ export const generateInsights = (data: HealthMetrics): StrategicInsight[] => {
   if (data.founderEquity < 50) {
     reports.push({ 
       level: 'ADVISORY', 
-      msg: "Founder equity is dropping below 50%. Consider debt-financing for the next milestone to avoid losing control.", 
+      msg: "Founder equity is dropping. Consider debt-financing for the next milestone to avoid losing control.", 
       type: 'equity',
       icon: 'Users'
     });

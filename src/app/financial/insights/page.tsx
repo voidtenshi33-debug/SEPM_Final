@@ -46,7 +46,7 @@ export default function FinancialInsightsPage() {
   // Prep data for engine
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const leadEquity = leadership.reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
+  const leadEquity = (leadership || []).reduce((acc, curr) => acc + (curr.equityPct || 0), 0);
   
   // Calculate Growth
   const salesGrowth = (latestMonth && prevMonth && prevMonth.netRevenue > 0)
