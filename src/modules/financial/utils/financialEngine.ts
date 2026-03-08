@@ -314,7 +314,7 @@ export const groupExpensesByType = (expenses: any[], categories: any[]) => {
   const catMap = categories.reduce((acc, cat) => ({ ...acc, [cat.id]: cat.type }), {} as Record<string, string>);
   return expenses.reduce((acc, exp) => {
     const type = catMap[exp.categoryId] || "Variable";
-    acc[type] = (acc[type] || 0) + exp.amount;
+    acc[type] = (acc[type] || 0) + (exp.amount || 0);
     return acc;
   }, { Fixed: 0, Variable: 0, "R&D": 0 } as Record<string, number>);
 };
@@ -330,5 +330,36 @@ export const calculateBudgetVariance = (actualAmount: number, budgetAmount: numb
     variance,
     variancePct: variancePct.toFixed(1),
     status: variance > 0 ? "OVER" : (variance < 0 && Math.abs(variancePct) > 1) ? "UNDER" : "ON_TRACK"
+  };
+};
+
+/**
+ * Calculates Break-Even Analysis.
+ */
+export const calculateBreakEvenAnalysis = (fixedCosts: number, totalRevenue: number, variableCosts: number) => {
+  if (totalRevenue <= 0) return null;
+  if (fixedCosts < 0) return { error: "Invalid fixed cost value." };
+
+  // 1. Contribution Margin: Money left after covering variable costs
+  const contributionMargin = totalRevenue - variableCosts;
+  const contributionMarginRatio = contributionMargin / totalRevenue;
+
+  if (contributionMarginRatio <= 0) {
+    return { error: "Variable costs exceed revenue. Break-even impossible." };
+  }
+
+  // 2. Break-Even Revenue: The "Survival Number"
+  const breakEvenPoint = fixedCosts / contributionMarginRatio;
+
+  // 3. Margin of Safety: How much revenue can drop before you hit loss
+  const marginOfSafety = ((totalRevenue - breakEvenPoint) / totalRevenue) * 100;
+
+  return {
+    breakEvenPoint: Math.round(breakEvenPoint),
+    contributionMargin: Math.round(contributionMargin),
+    marginRatio: (contributionMarginRatio * 100).toFixed(1),
+    marginOfSafety: marginOfSafety.toFixed(1),
+    isProfitable: totalRevenue >= breakEvenPoint,
+    gap: Math.abs(Math.round(totalRevenue - breakEvenPoint))
   };
 };
