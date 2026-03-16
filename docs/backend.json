@@ -53,7 +53,8 @@
         "id": { "type": "string" },
         "name": { "type": "string" },
         "type": { "type": "string", "enum": ["Fixed", "Variable", "R&D"] },
-        "color": { "type": "string" }
+        "color": { "type": "string" },
+        "monthlyEstimate": { "type": "number", "description": "The expected or recurring monthly cost for this category." }
       },
       "required": ["name", "type"]
     },

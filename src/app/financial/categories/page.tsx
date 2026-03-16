@@ -17,7 +17,8 @@ import {
   Loader2,
   PieChart as PieChartIcon,
   ReceiptText,
-  Calendar
+  Calendar,
+  Wallet
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -41,23 +42,23 @@ import { formatINR, getMonthlyDistribution } from "@/modules/financial/utils/fin
 import { cn } from "@/lib/utils";
 
 const DEFAULT_CATEGORIES = [
-  { name: "Salaries & Payroll", type: "Fixed", color: "#3B82F6" },
-  { name: "Cloud (AWS/Azure/GCP)", type: "Fixed", color: "#3B82F6" },
-  { name: "SaaS Subscriptions", type: "Fixed", color: "#3B82F6" },
-  { name: "Office Rent & Utilities", type: "Fixed", color: "#3B82F6" },
-  { name: "Insurance", type: "Fixed", color: "#3B82F6" },
-  { name: "Legal & Compliance", type: "Fixed", color: "#3B82F6" },
-  { name: "Utilities", type: "Fixed", color: "#3B82F6" },
-  { name: "Marketing & Ads", type: "Variable", color: "#F59E0B" },
-  { name: "Sales Commissions", type: "Variable", color: "#F59E0B" },
-  { name: "Freelance/Contractors", type: "Variable", color: "#F59E0B" },
-  { name: "Travel", type: "Variable", color: "#F59E0B" },
-  { name: "Logistics & Shipping", type: "Variable", color: "#F59E0B" },
-  { name: "Customer Support", type: "Variable", color: "#F59E0B" },
-  { name: "Miscellaneous", type: "Variable", color: "#F59E0B" },
-  { name: "Product Testing", type: "R&D", color: "#10B981" },
-  { name: "Prototype Hardware", type: "R&D", color: "#10B981" },
-  { name: "R&D Salaries", type: "R&D", color: "#10B981" },
+  { name: "Salaries & Payroll", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Cloud (AWS/Azure/GCP)", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "SaaS Subscriptions", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Office Rent & Utilities", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Insurance", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Legal & Compliance", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Utilities", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
+  { name: "Marketing & Ads", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Sales Commissions", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Freelance/Contractors", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Travel", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Logistics & Shipping", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Customer Support", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Miscellaneous", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
+  { name: "Product Testing", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
+  { name: "Prototype Hardware", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
+  { name: "R&D Salaries", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
 ];
 
 export default function CategoryPage() {
@@ -139,12 +140,18 @@ export default function CategoryPage() {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
     const type = formData.get("type") as string;
+    const estimate = Number(formData.get("estimate") || 0);
     const color = type === "Fixed" ? "#3B82F6" : type === "Variable" ? "#F59E0B" : "#10B981";
 
     if (!name || !type) return;
 
     try {
-      await addDoc(collection(firestore, "users", user.uid, "expenseCategories"), { name, type, color });
+      await addDoc(collection(firestore, "users", user.uid, "expenseCategories"), { 
+        name, 
+        type, 
+        color,
+        monthlyEstimate: estimate 
+      });
       setIsAdding(false);
       toast({ title: "Category added successfully" });
     } catch (e) {
@@ -203,6 +210,14 @@ export default function CategoryPage() {
                   <Input id="name" name="name" placeholder="e.g., Marketing Tools" required />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="estimate">Monthly Estimate (₹)</Label>
+                  <div className="relative">
+                    <Wallet className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input id="estimate" name="estimate" type="number" className="pl-10" placeholder="0" />
+                  </div>
+                  <p className="text-[10px] text-slate-400 italic">How much do you typically spend on this per month?</p>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="type">Classification</Label>
                   <Select name="type" required defaultValue="Variable">
                     <SelectTrigger>
@@ -237,7 +252,7 @@ export default function CategoryPage() {
           {filteredCategories?.map((cat) => {
             const isUsed = expenses?.some(exp => exp.categoryId === cat.id);
             return (
-              <Card key={cat.id} className="border-none shadow-md hover:shadow-lg transition-all group relative bg-white">
+              <Card key={cat.id} className="border-none shadow-md hover:shadow-lg transition-all group relative bg-white overflow-hidden">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-slate-100">
@@ -247,13 +262,16 @@ export default function CategoryPage() {
                       <p className="font-semibold text-sm">{cat.name}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <Badge variant="outline" className={cn(
-                          "text-[10px] h-4 uppercase font-bold",
+                          "text-[9px] h-4 uppercase font-bold",
                           cat.type === "Fixed" ? "border-blue-200 text-blue-700 bg-blue-50" :
                           cat.type === "Variable" ? "border-amber-200 text-amber-700 bg-amber-50" :
                           "border-emerald-200 text-emerald-700 bg-emerald-50"
                         )}>
                           {cat.type}
                         </Badge>
+                        {cat.monthlyEstimate > 0 && (
+                          <span className="text-[10px] font-bold text-slate-400">Est: {formatINR(cat.monthlyEstimate)}</span>
+                        )}
                       </div>
                     </div>
                   </div>
