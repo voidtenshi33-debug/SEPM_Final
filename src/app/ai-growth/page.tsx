@@ -152,9 +152,11 @@ export default function AIGrowthPage() {
           <Card className="border-none shadow-md">
             <CardContent className="p-6">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Survival Runway</p>
-              <p className="text-2xl font-bold text-slate-900">{runway >= 99 ? '99+' : runway} Mo</p>
-              <Badge variant="outline" className={`mt-2 text-[8px] uppercase ${runway < 6 ? 'border-rose-100 text-rose-600 bg-rose-50' : 'border-blue-100 text-blue-600 bg-blue-50'}`}>
-                {runway < 6 ? 'Liquidity Risk' : 'Liquidity Safe'}
+              <p className="text-2xl font-bold text-slate-900 uppercase">
+                {runway >= 999 ? '∞ Stable' : runway === 0 && !latestMonth ? 'Data Required' : `${runway} Mo`}
+              </p>
+              <Badge variant="outline" className={`mt-2 text-[8px] uppercase ${runway < 6 && currentBurn > 0 ? 'border-rose-100 text-rose-600 bg-rose-50' : 'border-blue-100 text-blue-600 bg-blue-50'}`}>
+                {runway < 6 && currentBurn > 0 ? 'Liquidity Risk' : 'Liquidity Safe'}
               </Badge>
             </CardContent>
           </Card>
@@ -222,10 +224,12 @@ export default function AIGrowthPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-xs font-bold uppercase">
                     <span className="text-slate-500">Capital Buffer</span>
-                    <span className={runway < 6 ? 'text-rose-600' : 'text-emerald-600'}>{runway} Months</span>
+                    <span className={runway < 6 && currentBurn > 0 ? 'text-rose-600' : 'text-emerald-600 font-bold'}>
+                      {runway >= 999 ? '∞ STABLE' : runway === 0 && !latestMonth ? 'DATA REQUIRED' : `${runway} Mo`}
+                    </span>
                   </div>
                   <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full ${runway < 6 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, (runway/12)*100)}%` }} />
+                    <div className={`h-full ${runway < 6 && currentBurn > 0 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${runway >= 999 ? 100 : Math.min(100, (runway/12)*100)}%` }} />
                   </div>
                 </div>
                 <div className="space-y-2">
