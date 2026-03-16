@@ -27,7 +27,8 @@ import { Progress } from "@/components/ui/progress";
 export default function BudgetingPage() {
   const { user } = useUser();
   const [mounted, setMounted] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState<string>("");
+  // Initialize with current month to ensure valid selection state
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().substring(0, 7));
   const db = useFirestore();
 
   useEffect(() => {
@@ -41,10 +42,11 @@ export default function BudgetingPage() {
   const { data: financials } = useCollection(financialsQuery);
 
   useEffect(() => {
-    if (financials && financials.length > 0 && !selectedMonth) {
+    if (financials && financials.length > 0 && selectedMonth === new Date().toISOString().substring(0, 7)) {
+      // If we have data, we can optionally switch to the latest month if the user hasn't interacted
       setSelectedMonth(financials[0].id);
     }
-  }, [financials, selectedMonth]);
+  }, [financials]);
 
   const budgetRef = useMemoFirebase(() => {
     if (!user || !selectedMonth) return null;
@@ -111,7 +113,8 @@ export default function BudgetingPage() {
                 {financials?.map((fin) => (
                   <SelectItem key={fin.id} value={fin.id}>{fin.id}</SelectItem>
                 ))}
-                {(!financials || financials.length === 0) && selectedMonth && (
+                {/* Ensure the current selection is always present in the list */}
+                {(!financials?.some(f => f.id === selectedMonth)) && (
                   <SelectItem value={selectedMonth}>{selectedMonth}</SelectItem>
                 )}
               </SelectContent>
