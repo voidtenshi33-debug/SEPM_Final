@@ -41,33 +41,12 @@ import {
 import { formatINR, getMonthlyDistribution } from "@/modules/financial/utils/financialEngine";
 import { cn } from "@/lib/utils";
 
-const DEFAULT_CATEGORIES = [
-  { name: "Salaries & Payroll", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Cloud (AWS/Azure/GCP)", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "SaaS Subscriptions", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Office Rent & Utilities", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Insurance", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Legal & Compliance", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Utilities", type: "Fixed", color: "#3B82F6", monthlyEstimate: 0 },
-  { name: "Marketing & Ads", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Sales Commissions", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Freelance/Contractors", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Travel", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Logistics & Shipping", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Customer Support", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Miscellaneous", type: "Variable", color: "#F59E0B", monthlyEstimate: 0 },
-  { name: "Product Testing", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
-  { name: "Prototype Hardware", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
-  { name: "R&D Salaries", type: "R&D", color: "#10B981", monthlyEstimate: 0 },
-];
-
 export default function CategoryPage() {
   const firestore = useFirestore();
   const { user } = useUser();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isAdding, setIsAdding] = React.useState(false);
-  const [isSeeding, setIsSeeding] = React.useState(false);
   const [selectedMonth, setSelectedMonth] = React.useState(new Date().toISOString().substring(0, 7));
 
   const categoriesQuery = useMemoFirebase(() => {
@@ -86,33 +65,8 @@ export default function CategoryPage() {
   }, [firestore, user]);
 
   const { data: categories, isLoading: loadingCats } = useCollection(categoriesQuery);
-  const { data: expenses, isLoading: loadingExps } = useCollection(expensesQuery);
+  const { data: expenses } = useCollection(expensesQuery);
   const { data: financials } = useCollection(financialsQuery);
-
-  React.useEffect(() => {
-    if (categories && categories.length === 0 && !isSeeding && user) {
-      handleSeedCategories();
-    }
-  }, [categories, user]);
-
-  const handleSeedCategories = async () => {
-    if (!user) return;
-    setIsSeeding(true);
-    try {
-      const batchPromises = DEFAULT_CATEGORIES.map(cat => 
-        addDoc(collection(firestore, "users", user.uid, "expenseCategories"), cat)
-      );
-      await Promise.all(batchPromises);
-      toast({
-        title: "System Seeded",
-        description: "17 professional categories have been initialized.",
-      });
-    } catch (e) {
-      console.error("Seeding failed", e);
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     if (!user) return;
@@ -173,7 +127,7 @@ export default function CategoryPage() {
   const fixedPct = grandTotal > 0 ? (fixedTotal / grandTotal) * 100 : 0;
   const variablePct = grandTotal > 0 ? (variableTotal / grandTotal) * 100 : 0;
 
-  if (loadingCats || isSeeding) {
+  if (loadingCats) {
     return (
       <div className="flex flex-col items-center justify-center h-64 space-y-4">
         <Loader2 className="h-8 w-8 animate-spin text-accent" />
@@ -291,6 +245,13 @@ export default function CategoryPage() {
               </Card>
             );
           })}
+          {filteredCategories?.length === 0 && !loadingCats && (
+            <div className="col-span-full py-12 text-center text-slate-400 italic border-2 border-dashed rounded-2xl">
+              <Tags className="h-8 w-8 mx-auto mb-2 opacity-20" />
+              <p className="text-sm">No operational categories defined.</p>
+              <p className="text-[10px]">Add a category to begin structural mapping.</p>
+            </div>
+          )}
         </div>
       </div>
 
