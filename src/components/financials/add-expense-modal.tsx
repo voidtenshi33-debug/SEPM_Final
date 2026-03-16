@@ -44,10 +44,12 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
     const formData = new FormData(e.currentTarget);
     const amount = Number(formData.get("amount"));
     const categoryId = formData.get("categoryId") as string;
-    const projectId = formData.get("projectId") as string;
+    const projectIdRaw = formData.get("projectId") as string;
     const date = formData.get("date") as string;
     const description = formData.get("description") as string;
     
+    // Convert "none" selection back to null for storage
+    const projectId = (projectIdRaw === "none" || !projectIdRaw) ? null : projectIdRaw;
     const monthId = date.substring(0, 7);
 
     try {
@@ -55,7 +57,7 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
       await addDoc(collection(firestore, "users", user.uid, "expenses"), {
         amount,
         categoryId,
-        projectId: projectId || null,
+        projectId: projectId,
         date,
         monthId: monthId,
         description,
@@ -134,12 +136,12 @@ export function AddExpenseModal({ categories }: AddExpenseModalProps) {
             <Label htmlFor="projectId" className="flex items-center gap-2">
               <Briefcase className="h-3 w-3" /> Linked Project (Optional)
             </Label>
-            <Select name="projectId">
+            <Select name="projectId" defaultValue="none">
               <SelectTrigger>
                 <SelectValue placeholder="No Project Link" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No Project Link</SelectItem>
+                <SelectItem value="none">No Project Link</SelectItem>
                 {projects?.map((proj) => (
                   <SelectItem key={proj.id} value={proj.id}>
                     {proj.name}
