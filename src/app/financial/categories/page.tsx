@@ -117,8 +117,10 @@ export default function CategoryPage() {
     cat.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const monthlyExpenses = expenses?.filter(e => e.monthId === selectedMonth || e.month === selectedMonth) || [];
-  const distributionData = getMonthlyDistribution(monthlyExpenses, categories || []);
+  const distributionData = React.useMemo(() => {
+    const monthlyExpenses = expenses?.filter(e => (e.monthId === selectedMonth || e.month === selectedMonth)) || [];
+    return getMonthlyDistribution(monthlyExpenses, categories || []);
+  }, [expenses, categories, selectedMonth]);
   
   const fixedTotal = distributionData.filter(d => d.type === 'Fixed').reduce((s, d) => s + d.amount, 0);
   const variableTotal = distributionData.filter(d => d.type === 'Variable').reduce((s, d) => s + d.amount, 0);
@@ -274,7 +276,7 @@ export default function CategoryPage() {
                    {financials?.map(f => (
                      <SelectItem key={f.id} value={f.id}>{f.id}</SelectItem>
                    ))}
-                   {(!financials || financials.length === 0) && (
+                   {(!financials?.some(f => f.id === selectedMonth)) && (
                      <SelectItem value={selectedMonth}>{selectedMonth}</SelectItem>
                    )}
                 </SelectContent>
@@ -282,10 +284,10 @@ export default function CategoryPage() {
           </div>
         </div>
 
-        <Card className="border-none shadow-xl overflow-hidden bg-white">
+        <Card className="border-none shadow-xl overflow-hidden bg-white min-h-[400px]">
           <CardContent className="p-0">
             {distributionData.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2">
+              <div className="grid grid-cols-1 lg:grid-cols-2 animate-in fade-in duration-500">
                 <div className="p-8 border-r border-slate-100 flex flex-col items-center justify-center">
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
@@ -301,7 +303,7 @@ export default function CategoryPage() {
                           paddingAngle={4}
                         >
                           {distributionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
+                            <Cell key={`cell-${index}`} fill={entry.color || '#3B82F6'} strokeWidth={0} />
                           ))}
                         </Pie>
                         <Tooltip 
@@ -345,7 +347,7 @@ export default function CategoryPage() {
                         {distributionData.map((item, i) => (
                           <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                             <td className="py-3 px-2 font-bold text-slate-800 flex items-center gap-2">
-                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color || '#3B82F6' }} />
                               {item.name}
                             </td>
                             <td className="py-3 px-2">
@@ -366,14 +368,14 @@ export default function CategoryPage() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-20 space-y-4">
+              <div className="flex flex-col items-center justify-center text-center p-20 space-y-4">
                 <div className="h-20 w-20 rounded-full bg-slate-50 flex items-center justify-center">
                   <ReceiptText className="h-10 w-10 text-slate-200" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-slate-900 text-lg">No Data Recorded for {selectedMonth}</h4>
+                  <h4 className="font-bold text-slate-900 text-lg">No Categorical Burn Detected</h4>
                   <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-2">
-                    Start logging categorical expenses in the Operational tab.
+                    Log performance signals in the Operational performances to activate intelligence mapping for {selectedMonth}.
                   </p>
                 </div>
               </div>

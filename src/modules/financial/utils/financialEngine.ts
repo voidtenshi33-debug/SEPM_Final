@@ -1,3 +1,4 @@
+
 'use client';
 
 /**
@@ -277,34 +278,38 @@ export const generateInsights = (data: {
  * Aggregates monthly expenses by category
  */
 export const getMonthlyDistribution = (monthlyExpenses: any[] | null, globalCategories: any[] | null) => {
-  if (!monthlyExpenses || monthlyExpenses.length === 0 || !globalCategories) return [];
+  if (!monthlyExpenses || monthlyExpenses.length === 0) return [];
 
-  const catMap = globalCategories.reduce((acc, cat) => ({ 
+  const catMap = (globalCategories || []).reduce((acc, cat) => ({ 
     ...acc, 
-    [cat.id]: { name: cat.name, type: cat.type } 
-  }), {} as Record<string, { name: string, type: string }>);
+    [cat.id]: { name: cat.name, type: cat.type, color: cat.color } 
+  }), {} as Record<string, { name: string, type: string, color?: string }>);
 
   const total = monthlyExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  if (total === 0) return [];
   
   const grouped = monthlyExpenses.reduce((acc, exp) => {
     const categoryId = exp.categoryId;
-    const cat = catMap[categoryId] || { name: "Other", type: "Variable" };
+    const cat = catMap[categoryId] || { name: "Uncategorized", type: "Variable", color: "#94A3B8" };
     
     if (!acc[categoryId]) {
       acc[categoryId] = { 
         id: categoryId,
         name: cat.name, 
         type: cat.type, 
+        color: cat.color,
         amount: 0, 
         percentage: 0 
       };
     }
     acc[categoryId].amount += (exp.amount || 0);
-    acc[categoryId].percentage = total > 0 ? parseFloat(((acc[categoryId].amount / total) * 100).toFixed(1)) : 0;
     return acc;
   }, {} as Record<string, any>);
 
-  return Object.values(grouped).sort((a: any, b: any) => b.amount - a.amount);
+  return Object.values(grouped).map(item => ({
+    ...item,
+    percentage: parseFloat(((item.amount / total) * 100).toFixed(1))
+  })).sort((a: any, b: any) => b.amount - a.amount);
 };
 
 /**
