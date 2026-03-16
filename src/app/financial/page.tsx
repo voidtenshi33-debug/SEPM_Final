@@ -53,7 +53,8 @@ export default function FinancialOverview() {
   // Prep metrics
   const ebitda = latestMonth ? calcEBITDA(latestMonth.netRevenue, latestMonth.operatingExpenses) : 0;
   const burn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
-  const runway = calculateRunway(42000000, burn); // Mock cash balance
+  // Use zero as base instead of mock value to avoid confusion
+  const runway = burn > 0 ? calculateRunway(0, burn) : 999; 
   
   const totalLeadershipEquity = leadership?.reduce((sum, member) => sum + (member.equityPct || 0), 0) || 0;
   const totalInvestorEquity = capTable?.totalInvestorEquityPct || 0;
@@ -95,9 +96,9 @@ export default function FinancialOverview() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard 
           title="Cash Runway" 
-          value={`${runway} Months`} 
+          value={runway >= 999 ? "∞ Stable" : `${runway} Mo`} 
           icon={Wallet} 
-          description="Est. depletion: Nov 2025"
+          description={burn > 0 ? `Detected burn: ${formatINR(burn)}` : "No operational burn"}
           className="bg-primary text-primary-foreground"
         />
         <KPICard 
@@ -132,7 +133,7 @@ export default function FinancialOverview() {
             <CardDescription>Historical performance in INR (₹)</CardDescription>
           </CardHeader>
           <CardContent className="p-6 h-[350px]">
-            {mounted ? (
+            {mounted && chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
@@ -151,7 +152,9 @@ export default function FinancialOverview() {
                   <Area type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
                 </AreaChart>
               </ResponsiveContainer>
-            ) : null}
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 italic">No revenue trends logged yet.</div>
+            )}
           </CardContent>
         </Card>
 

@@ -22,7 +22,7 @@ export const calcEBITDAMargin = (ebitda: number, netRevenue: number): number =>
  * Estimates runway in months based on current cash and average burn
  */
 export function calculateRunway(currentCash: number, monthlyBurn: number): number {
-  if (monthlyBurn <= 0) return 99.9;
+  if (monthlyBurn <= 0) return 999; // Using 999 as a sentinel for infinite/profitable
   return parseFloat((currentCash / monthlyBurn).toFixed(1));
 }
 

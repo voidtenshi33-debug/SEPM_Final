@@ -1,7 +1,7 @@
 "use client";
 
 import { KPICard } from "@/components/dashboard/kpi-card";
-import { TrendingDown, Activity, Wallet, Zap } from "lucide-react";
+import { TrendingDown, Activity, Wallet, Zap, AlertCircle } from "lucide-react";
 import { calcEBITDA, calculateRunway, formatINR } from "@/modules/financial/utils/financialEngine";
 
 interface MetricCardsProps {
@@ -38,16 +38,16 @@ export function MetricCards({ currentFinancials, prevFinancials, currentCash }: 
       />
       <KPICard 
         title="Cash Runway" 
-        value={runway >= 99 ? "∞ Months" : `${runway.toFixed(1)} Months`} 
+        value={runway >= 999 ? "∞ Stable" : `${runway.toFixed(1)} Mo`} 
         icon={Activity} 
-        description={runway < 6 ? "Critical Threshold" : "Healthy Status"}
-        className={runway < 6 ? "bg-rose-50/50" : "bg-emerald-50/50"}
+        description={burnRate > 0 ? "Survival threshold detected" : "Safe: No burn detected"}
+        className={runway < 6 && burnRate > 0 ? "bg-rose-50/50" : "bg-emerald-50/50"}
       />
       <KPICard 
         title="Available Cash" 
-        value={formatINR(currentCash)} 
+        value={currentCash > 0 ? formatINR(currentCash) : "---"} 
         icon={Wallet} 
-        description="Primary operations account"
+        description={currentCash > 0 ? "Primary account balance" : "Baseline signal required"}
       />
     </div>
   );

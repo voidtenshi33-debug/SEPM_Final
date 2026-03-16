@@ -62,7 +62,8 @@ export default function OperationalPage() {
   const netRev = currentMonth?.netRevenue || 0;
   const opEx = currentMonth?.operatingExpenses || 0;
   const ebitda = calcEBITDA(netRev, opEx);
-  const runway = calculateRunway(42000000, opEx); // Mock cash
+  const burn = opEx > netRev ? opEx - netRev : 0;
+  const runway = burn > 0 ? calculateRunway(0, burn) : 999;
 
   // Distribution Logic
   const monthExpenses = expenses?.filter(e => (e.monthId === selectedMonth || e.month === selectedMonth)) || [];
@@ -94,7 +95,7 @@ export default function OperationalPage() {
   }, [budget, categories, distributionData]);
 
   const totalBudget = varianceReport.reduce((sum, v) => sum + v.budgetAmount, 0);
-  const totalActual = varianceReport.reduce((sum, v) => sum + v.actualAmount, 0);
+  const totalActual = varianceReport.slice().reduce((sum, v) => sum + v.actualAmount, 0);
   const totalProgress = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
 
   const chartData = financials?.map(f => ({
@@ -144,15 +145,15 @@ export default function OperationalPage() {
                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cash Runway</p>
                <Wallet className="h-4 w-4 text-blue-400" />
             </div>
-            <p className="text-3xl font-bold">{runway} Months</p>
-            <p className="text-[10px] text-slate-500 mt-2 italic">Est. depletion: Nov 2025</p>
+            <p className="text-3xl font-bold">{runway >= 999 ? '∞ Stable' : `${runway} Mo`}</p>
+            <p className="text-[10px] text-slate-500 mt-2 italic">{burn > 0 ? `Burn: ${formatINR(burn)}/mo` : 'No burn detected'}</p>
           </CardContent>
         </Card>
 
         <Card className="border-none shadow-xl">
           <CardContent className="p-6">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Monthly Burn</p>
-            <p className="text-3xl font-bold font-headline">{formatINR(opEx)}</p>
+            <p className="text-3xl font-bold font-headline">{formatINR(burn)}</p>
             <div className="flex items-center text-[10px] text-rose-600 mt-2 font-bold uppercase">
                <TrendingUp className="h-3 w-3 mr-1" /> Variable Risk
             </div>
@@ -261,7 +262,7 @@ export default function OperationalPage() {
             <CardDescription>Historical trend analysis (₹)</CardDescription>
           </CardHeader>
           <CardContent className="h-[350px] p-6 pt-0">
-            {mounted ? (
+            {mounted && chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
@@ -275,7 +276,7 @@ export default function OperationalPage() {
                   <Line type="monotone" dataKey="expenses" stroke="#0F172A" strokeWidth={4} dot={{ r: 6, fill: '#0F172A', strokeWidth: 2, stroke: '#fff' }} name="OpEx" />
                 </LineChart>
               </ResponsiveContainer>
-            ) : null}
+            ) : <div className="h-full flex items-center justify-center text-slate-400 italic">Insufficient performance history.</div>}
           </CardContent>
         </Card>
 

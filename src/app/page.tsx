@@ -78,7 +78,7 @@ export default function DashboardPage() {
   const currentMRR = latestMonth?.netRevenue || 0;
   const currentBurn = latestMonth ? Math.max(0, latestMonth.operatingExpenses - latestMonth.netRevenue) : 0;
   
-  const runway = currentBurn > 0 ? calculateRunway(0, currentBurn) : 99; 
+  const runway = currentBurn > 0 ? calculateRunway(0, currentBurn) : 999; 
   const teamSize = leadership?.length || 0;
   
   const activeProjects = projects?.filter(p => p.status === 'Active') || [];
@@ -99,8 +99,8 @@ export default function DashboardPage() {
   const stats = [
     {
       title: "Cash Runway",
-      value: runway >= 99 ? "∞ Months" : `${runway} Mo`,
-      description: currentBurn > 0 ? `Burn: ${formatINR(currentBurn)}/mo` : "No burn detected",
+      value: runway >= 999 ? "∞ Stable" : `${runway} Mo`,
+      description: currentBurn > 0 ? `Burn: ${formatINR(currentBurn)}/mo` : "Operational Profit Active",
       icon: Clock,
       color: "text-blue-600",
       bg: "bg-blue-50",
