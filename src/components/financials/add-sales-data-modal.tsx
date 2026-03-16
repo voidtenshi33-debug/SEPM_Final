@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { doc, updateDoc, collection, query, where, getDocs, setDoc } from "firebase/firestore";
 import { 
   Dialog, 
@@ -26,10 +26,12 @@ export function AddSalesDataModal({ businessType }: AddSalesDataModalProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
     
     const formData = new FormData(e.currentTarget);
@@ -37,9 +39,9 @@ export function AddSalesDataModal({ businessType }: AddSalesDataModalProps) {
     
     // Base data
     const data: any = {
-      month,
+      id: month,
       netRevenue: Number(formData.get("netRevenue")),
-      pipelineValue: Number(formData.get("pipelineValue") || 0),
+      grossRevenue: Number(formData.get("netRevenue")), // Assuming gross=net for simple logs
     };
 
     // Conditional data
@@ -55,20 +57,20 @@ export function AddSalesDataModal({ businessType }: AddSalesDataModalProps) {
     }
 
     try {
-      const financialsRef = collection(firestore, "financials");
-      const q = query(financialsRef, where("month", "==", month));
+      const financialsRef = collection(firestore, "users", user.uid, "financials");
+      const q = query(financialsRef, where("id", "==", month));
       const querySnapshot = await getDocs(q);
 
       if (!querySnapshot.empty) {
         const docId = querySnapshot.docs[0].id;
-        await updateDoc(doc(firestore, "financials", docId), data);
+        await updateDoc(doc(firestore, "users", user.uid, "financials", docId), data);
       } else {
-        // If not found, use month as ID for prototype consistency
-        await setDoc(doc(firestore, "financials", month), {
+        // Use month as ID for consistency
+        await setDoc(doc(firestore, "users", user.uid, "financials", month), {
           ...data,
           operatingExpenses: 0,
           cogs: 0,
-          createdAt: new Date().toISOString()
+          dateRecorded: new Date().toISOString()
         });
       }
       
@@ -80,7 +82,7 @@ export function AddSalesDataModal({ businessType }: AddSalesDataModalProps) {
     } catch (error) {
       toast({
         title: "Update Failed",
-        description: "Could not save sales metrics. Please check network connectivity.",
+        description: "Could not save sales metrics.",
         variant: "destructive",
       });
     } finally {
@@ -115,11 +117,6 @@ export function AddSalesDataModal({ businessType }: AddSalesDataModalProps) {
               <Label htmlFor="netRevenue">Net Revenue (₹)</Label>
               <Input id="netRevenue" name="netRevenue" type="number" required placeholder="Enter total revenue" />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="pipelineValue">Pipeline Value (₹)</Label>
-            <Input id="pipelineValue" name="pipelineValue" type="number" placeholder="Value of leads/potential deals" />
           </div>
 
           {(businessType === "Product" || businessType === "Hybrid") && (

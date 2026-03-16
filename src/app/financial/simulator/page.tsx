@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useFirestore, useCollection } from "@/firebase";
+import { useFirestore, useCollection, useUser, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, limit, where } from "firebase/firestore";
-import { useMemoFirebase } from "@/firebase/provider";
 import { 
   formatINR, 
   groupExpensesByType,
@@ -41,23 +40,31 @@ export default function ScenarioSimulatorPage() {
   });
 
   const db = useFirestore();
+  const { user } = useUser();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   // Fetch latest month for "Reality" base
-  const finQuery = useMemoFirebase(() => query(collection(db, 'financials'), orderBy('id', 'desc'), limit(1)), [db]);
+  const finQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(collection(db, 'users', user.uid, 'financials'), orderBy('id', 'desc'), limit(1));
+  }, [db, user]);
+  
   const { data: financials, isLoading: loadingFin } = useCollection(finQuery);
   const currentMonth = financials?.[0];
 
-  const categoriesQuery = useMemoFirebase(() => collection(db, 'expenseCategories'), [db]);
+  const categoriesQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return collection(db, 'users', user.uid, 'expenseCategories');
+  }, [db, user]);
   const { data: categories, isLoading: loadingCats } = useCollection(categoriesQuery);
 
-  const expensesQuery = useMemoFirebase(() => 
-    currentMonth ? query(collection(db, 'expenses'), where('monthId', '==', currentMonth.id)) : null, 
-    [db, currentMonth]
-  );
+  const expensesQuery = useMemoFirebase(() => {
+    if (!user || !currentMonth) return null;
+    return query(collection(db, 'users', user.uid, 'expenses'), where('monthId', '==', currentMonth.id));
+  }, [db, user, currentMonth]);
   const { data: expenses, isLoading: loadingExps } = useCollection(expensesQuery);
 
   const reality = React.useMemo(() => {
@@ -98,7 +105,7 @@ export default function ScenarioSimulatorPage() {
 
   const resetSim = () => setSliders({ revGrowth: 0, costCut: 0, fundingInjection: 0 });
 
-  if (!mounted) return null;
+  if (!mounted || !user) return null;
 
   if (loadingFin || loadingCats || loadingExps) {
     return (
@@ -223,8 +230,8 @@ export default function ScenarioSimulatorPage() {
                   <tbody className="divide-y divide-slate-100 font-medium">
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-900">Net Revenue</td>
-                      <td className="px-6 py-4 text-slate-500">{formatINR(reality.revenue)}</td>
-                      <td className="px-6 py-4 font-bold text-slate-900">{formatINR(simulation?.simRevenue)}</td>
+                      <td className="px-6 py-4 text-slate-500">{reality.revenue ? formatINR(reality.revenue) : '---'}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900">{simulation?.simRevenue ? formatINR(simulation.simRevenue) : '---'}</td>
                       <td className="px-6 py-4 text-right">
                         {sliders.revGrowth !== 0 && (
                           <span className={`font-bold px-2 py-1 rounded text-[10px] ${sliders.revGrowth > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
@@ -235,8 +242,8 @@ export default function ScenarioSimulatorPage() {
                     </tr>
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-900">Monthly Burn</td>
-                      <td className="px-6 py-4 text-slate-500">{formatINR(reality.burn)}</td>
-                      <td className="px-6 py-4 font-bold text-slate-900">{formatINR(simulation?.simBurn)}</td>
+                      <td className="px-6 py-4 text-slate-500">{reality.burn ? formatINR(reality.burn) : '---'}</td>
+                      <td className="px-6 py-4 font-bold text-slate-900">{simulation?.simBurn ? formatINR(simulation.simBurn) : '---'}</td>
                       <td className="px-6 py-4 text-right">
                         {simulation && simulation.simBurn < reality.burn ? (
                           <span className="text-emerald-600 font-bold">-{formatINR(reality.burn - simulation.simBurn)}</span>
@@ -247,9 +254,9 @@ export default function ScenarioSimulatorPage() {
                     </tr>
                     <tr className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 font-bold text-slate-900">Monthly EBITDA</td>
-                      <td className="px-6 py-4 text-slate-500">{formatINR(reality.ebitda)}</td>
+                      <td className="px-6 py-4 text-slate-500">{reality.ebitda ? formatINR(reality.ebitda) : '---'}</td>
                       <td className={`px-6 py-4 font-bold ${simulation && simulation.simEBITDA >= 0 ? 'text-emerald-600' : 'text-slate-900'}`}>
-                        {formatINR(simulation?.simEBITDA)}
+                        {simulation?.simEBITDA ? formatINR(simulation.simEBITDA) : '---'}
                       </td>
                       <td className="px-6 py-4 text-right">
                         {simulation && (

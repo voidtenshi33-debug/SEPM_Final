@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from "react";
-import { useFirestore } from "@/firebase";
+import { useFirestore, useUser } from "@/firebase";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { 
   Dialog, 
@@ -29,6 +29,7 @@ export function SetBudgetModal({ categories, monthId, existingBudget }: SetBudge
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const firestore = useFirestore();
+  const { user } = useUser();
   const { toast } = useToast();
 
   const [budgetValues, setBudgetValues] = React.useState<Record<string, number>>({});
@@ -47,6 +48,7 @@ export function SetBudgetModal({ categories, monthId, existingBudget }: SetBudge
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setLoading(true);
 
     const categoryBudgets = Object.entries(budgetValues).map(([categoryId, budgetAmount]) => ({
@@ -55,7 +57,7 @@ export function SetBudgetModal({ categories, monthId, existingBudget }: SetBudge
     }));
 
     try {
-      const budgetRef = doc(firestore, "budgets", monthId);
+      const budgetRef = doc(firestore, "users", user.uid, "budgets", monthId);
       await setDoc(budgetRef, {
         id: monthId,
         month: monthId,
